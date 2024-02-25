@@ -1,0 +1,82 @@
+{% extends "header.html" %}
+
+<title>{% block title %} Transactions  {% endblock %}</title>
+{% block content %}
+    <div class="container-fluid px-4">
+        <h1 class="mt-4">Transactions</h1>
+        <ol class="breadcrumb mb-4">
+            <li class="breadcrumb-item active">Transactions</li>
+        </ol>
+
+        <div class="row my-4">
+            <div class="col-lg-12 col-12">
+                <div class="custom-block bg-white">
+                    <div class="table-responsive">
+                        <table class="account-table table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">No.</th>
+
+                                    <th scope="col">Name</th>
+
+                                    <th scope="col">Email</th>
+
+                                    <th scope="col">Phone Number</th>
+
+                                    <th scope="col">House Number</th>
+
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {% for cus in cus %}
+                                <tr>
+                                    <td scope="row">{{ cus.id }}</td>
+
+                                    <td scope="row">{{ cus.firstname }} {{ cus.lastname }}</td>
+
+                                    <td scope="row">{{ cus.email }}</td>
+
+                                    <td scope="row">{{ cus.phone }}</td>
+
+                                    <td scope="row">{{ cus.house_id }}</td>
+
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <nav aria-label="Page navigation example">
+                            <ul class="pagination justify-content-center mb-0">
+                                <li class="page-item">
+                                    <a class="page-link" href="#" aria-label="Previous">
+                                        <span aria-hidden="true">Prev</span>
+                                    </a>
+                                </li>
+
+                                <li class="page-item active" aria-current="page">
+                                    <a class="page-link" href="#">1</a>
+                                </li>
+                                
+                                <li class="page-item">
+                                    <a class="page-link" href="#">2</a>
+                                </li>
+                                
+                                <li class="page-item">
+                                    <a class="page-link" href="#">3</a>
+                                </li>
+                                
+                                <li class="page-item">
+                                    <a class="page-link" href="#" aria-label="Next">
+                                        <span aria-hidden="true">Next</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}

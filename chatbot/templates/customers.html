@@ -1,0 +1,246 @@
+{% extends "header.html" %}
+
+<title>{% block title %} Tenants  {% endblock title %}</title>
+{% block content %}
+    <div class="container-fluid px-4">
+        <h1 class="mt-4">Tenants</h1>
+        <ol class="breadcrumb mb-4">
+            <li class="breadcrumb-item active">Tenants</li>
+        </ol>
+
+        <div class="row my-4">
+            <div class="col-lg-12 col-12">
+                <div class="custom-block bg-white">
+                    <div class="table-responsive">
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addCustomerModal">
+                            Add New Tenant
+                        </button>
+                        <table class="account-table table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">No.</th>
+
+                                    <th scope="col">Name</th>
+
+                                    <th scope="col">Email</th>
+
+                                    <th scope="col">Phone Number</th>
+
+                                    <th scope="col">Action</th>
+
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {% for cust in cus %}
+                                <tr>
+
+                                    <td scope="row">{{ cust.id }}</td>
+
+                                    <td scope="row"> {{ cust.firstname }} {{ cust.lastname }} </td>
+
+                                    <td scope="row">{{ cust.email }}</td>
+
+                                    <td scope="row">{{ cust.phone }}</td>
+
+                                    <td scope="row">
+                                        <a href="#" title="Edit" data-bs-toggle="modal" data-bs-target="#editCustomerModal" onclick="loadCustomerDetails({{ cust.id }})" class="bi-pencil-square custom-block-edit-icon"></a>
+                                    </td>
+
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <nav aria-label="Page navigation example">
+                            <ul class="pagination justify-content-center mb-0">
+                                <li class="page-item">
+                                    <a class="page-link" href="#" aria-label="Previous">
+                                        <span aria-hidden="true">Prev</span>
+                                    </a>
+                                </li>
+
+                                <li class="page-item active" aria-current="page">
+                                    <a class="page-link" href="#">1</a>
+                                </li>
+                                
+                                <li class="page-item">
+                                    <a class="page-link" href="#">2</a>
+                                </li>
+                                
+                                <li class="page-item">
+                                    <a class="page-link" href="#">3</a>
+                                </li>
+                                
+                                <li class="page-item">
+                                    <a class="page-link" href="#" aria-label="Next">
+                                        <span aria-hidden="true">Next</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- The Edit Customer Modal -->
+    <div class="modal fade" id="editCustomerModal" tabindex="-1" role="dialog" aria-labelledby="editCustomerModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editCustomerModalLabel">Edit Tenant Details</h5>
+                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Form for editing customer -->
+                    <form id="editCustomerForm" method="POST">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="firstName">First Name</label>
+                            <input type="text" name="firstname" class="form-control" id="firstName" required="required">
+                        </div>
+                        <div class="form-group">
+                            <input type="hidden" name="id" class="form-control" id="id" required="required">
+                        </div>
+                        <div class="form-group">
+                            <label for="lastName">Last Name</label>
+                            <input type="text" name="lastname" class="form-control" id="lastName" required="required">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" name="email" readonly class="form-control" id="email" required="required">
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" class="form-control" name="phone" id="phone" required="required">
+                        </div>
+                        <div class="form-group">
+                            <label for="Active">Active</label>
+                            <select name="active" class="form-control" id="active" required="required">
+                                <option value=""></option>
+                                <option value="0" {% if cus.is_active == 0 %} selected {% endif %} >Inactive</option>
+                                <option value="1" {% if cus.is_active == 1 %} selected {% endif %} >Active</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="saveCustomerChanges()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal -->
+    <div class="modal fade" id="addCustomerModal" tabindex="-1" role="dialog" aria-labelledby="addCustomerModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addCustomerModalLabel">Add New Tenant</h5>
+                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="addCustomerForm" method="POST">
+                        {% csrf_token %}
+                        <div class="form-group">
+                            <label for="firstName">First Name</label>
+                            <input type="text" name="firstname" class="form-control" id="firstName" required="required">
+                        </div>
+                        <div class="form-group">
+                            <label for="lastName">Last Name</label>
+                            <input type="text" name="lastname" class="form-control" id="lastName" required="required">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" name="email" class="form-control" id="email" required="required">
+                        </div>
+                        <div class="form-group">
+                            <label for="phone">Phone Number</label>
+                            <input type="tel" name="phone" class="form-control" id="phone" required="required">
+                        </div>
+                        <div class="form-group">
+                            <label for="Active">Active</label>
+                            <select name="active" class="form-control" id="active" required="required">
+                                <option value="" ></option>
+                                <option value="0" >Inactive</option>
+                                <option value="1">Active</option>
+                            </select>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary" onclick="addCustomer()">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        function loadCustomerDetails(customerId) {
+            $.get('/tenants/' + customerId, function(data) {
+                $('#id').val(data.id)
+                $('#firstName').val(data.firstname); 
+                $('#lastName').val(data.lastname); 
+                $('#phone').val(data.phone); 
+                $('#email').val(data.email);                 
+                $('#active').val(data.active);                 
+            }).fail(function() {
+                console.error('Error fetching customer details');
+            });
+        }
+        
+        function saveCustomerChanges() {
+            var formData = $('#editCustomerForm').serialize();  
+            $.ajax({
+                type: 'POST',
+                url: '/tenants/update/',  
+                data: formData,
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alert('Customer updated successfully!');
+                        $('#editCustomerModal').modal('hide');  
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('An error occurred while updating the customer.');
+                }
+            });
+        }
+        function addCustomer() {
+            var formData = $('#addCustomerForm').serialize();  
+            $.ajax({
+                type: 'POST',
+                url: '/tenants/add/',  
+                data: formData,
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alert('Customer added successfully!');
+                        $('#addCustomerModal').modal('hide');  
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('An error occurred while adding the customer.');
+                }
+            });
+        }
+        
+    </script>
+
+
+{% endblock content %}
