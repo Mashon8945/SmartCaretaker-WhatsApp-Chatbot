@@ -19,27 +19,31 @@
 
                                     <th scope="col">Name</th>
 
-                                    <th scope="col">Email</th>
+                                    <th scope="col">House No</th>
 
-                                    <th scope="col">Phone Number</th>
+                                    <th scope="col">Invoice</th>
 
-                                    <th scope="col">House Number</th>
+                                    <th scope="col">Amount</th>
+
+                                    <th scope="col">Date</th>
 
                                 </tr>
                             </thead>
 
                             <tbody>
-                                {% for cus in cus %}
+                                {% for tx in transaction %}
                                 <tr>
-                                    <td scope="row">{{ cus.id }}</td>
+                                    <td scope="row">{{ tx.id }}</td>
 
-                                    <td scope="row">{{ cus.firstname }} {{ cus.lastname }}</td>
+                                    <td scope="row">{{ tx.tenant.firstname }} {{ tx.tenant.lastname }}</td>
 
-                                    <td scope="row">{{ cus.email }}</td>
+                                    <td scope="row">H({{ tx.house_id }})</td>
 
-                                    <td scope="row">{{ cus.phone }}</td>
+                                    <td scope="row">{{ tx.invoice_id }}</td>
 
-                                    <td scope="row">{{ cus.house_id }}</td>
+                                    <td scope="row">{{ tx.amount }}</td>
+
+                                    <td scope="row">{{ tx.date }}</td>
 
                                 </tr>
                                 {% endfor %}

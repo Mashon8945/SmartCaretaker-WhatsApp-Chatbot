@@ -8,6 +8,16 @@
             <li class="breadcrumb-item active">Tenants</li>
         </ol>
 
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <div class="row my-4">
             <div class="col-lg-12 col-12">
                 <div class="custom-block bg-white">
@@ -26,6 +36,10 @@
 
                                     <th scope="col">Phone Number</th>
 
+                                    <th scope="col">House Number</th>
+
+                                    <th scope="col">Status</th>
+
                                     <th scope="col">Action</th>
 
                                 </tr>
@@ -35,7 +49,7 @@
                                 {% for cust in cus %}
                                 <tr>
 
-                                    <td scope="row">{{ cust.id }}</td>
+                                    <td scope="row">{{ index_offset|add:forloop.counter }}</td>
 
                                     <td scope="row"> {{ cust.firstname }} {{ cust.lastname }} </td>
 
@@ -44,7 +58,39 @@
                                     <td scope="row">{{ cust.phone }}</td>
 
                                     <td scope="row">
-                                        <a href="#" title="Edit" data-bs-toggle="modal" data-bs-target="#editCustomerModal" onclick="loadCustomerDetails({{ cust.id }})" class="bi-pencil-square custom-block-edit-icon"></a>
+                                        {% if cust.assigned_house_id is null%}
+                                            None
+                                        {% else %}
+                                            H({{ cust.assigned_house_id }})
+                                        {% endif %}
+                                    </td>
+
+                                    <td scope="row">
+                                        {% if cust.is_active == 1 %}
+                                            <strong style="color: green">Active</strong>
+                                        {% elif cust.is_active == 0 %}
+                                            <strong style="color: red">Inactive</strong>
+                                        {% endif %}
+                                    </td>
+
+                                    <td scope="row">
+                                        <div class="dropdown">
+                                            <button class="btn btn-primary dropdown-toggle align-middle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots-vertical" viewBox="0 0 16 16">
+                                                    <path fill-rule="evenodd" d="M2 12.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zm0-5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zm0-5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
+                                                </svg>
+                                            </button>
+                                            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                                <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editCustomerModal" onclick="loadCustomerDetails({{ cust.id }})" >Edit Tenant</button></li>
+                                                <!-- Add morace tions here -->
+                                                <li>
+                                                    <form action="{% url 'delete_customer' cust.id %}" method="post">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="dropdown-item" style="color: red;">Delete Tenant</button>
+                                                    </form>
+                                                </li>
+                                            </ul>
+                                        </div>
                                     </td>
 
                                 </tr>
@@ -54,32 +100,36 @@
                     </div>
 
                     <nav aria-label="Page navigation example">
-                            <ul class="pagination justify-content-center mb-0">
-                                <li class="page-item">
-                                    <a class="page-link" href="#" aria-label="Previous">
-                                        <span aria-hidden="true">Prev</span>
-                                    </a>
-                                </li>
+                        <ul class="pagination justify-content-center mb-0">
+                            <li class="page-item">
+                                {% if cus.has_previous %}
+                                <a class="page-link" href="?page={{ cus.previous_page_number }}" aria-label="Previous">
+                                    <span aria-hidden="true">Prev</span>
+                                </a>
+                                {% endif %}
+                            </li>
 
-                                <li class="page-item active" aria-current="page">
-                                    <a class="page-link" href="#">1</a>
-                                </li>
-                                
-                                <li class="page-item">
-                                    <a class="page-link" href="#">2</a>
-                                </li>
-                                
-                                <li class="page-item">
-                                    <a class="page-link" href="#">3</a>
-                                </li>
-                                
-                                <li class="page-item">
-                                    <a class="page-link" href="#" aria-label="Next">
-                                        <span aria-hidden="true">Next</span>
-                                    </a>
-                                </li>
-                            </ul>
-                        </nav>
+                            <li class="page-item active" aria-current="page">
+                                <a class="page-link">{{ cus.number }}</a>
+                            </li>
+                            
+                            <li class="page-item">
+                                <a class="page-link">of</a>
+                            </li>
+                            
+                            <li class="page-item">
+                                <a class="page-link">{{ cus.paginator.num_pages }}</a>
+                            </li>
+                            
+                            <li class="page-item">
+                                {% if cus.has_next %}
+                                <a class="page-link" href="?page={{cus.next_page_number }}" aria-label="Next">
+                                    <span aria-hidden="true">Next</span>
+                                </a>
+                                {% endif %}
+                            </li>
+                        </ul>
+                    </nav>
                 </div>
             </div>
         </div>
@@ -119,11 +169,7 @@
                         </div>
                         <div class="form-group">
                             <label for="Active">Active</label>
-                            <select name="active" class="form-control" id="active" required="required">
-                                <option value=""></option>
-                                <option value="0" {% if cus.is_active == 0 %} selected {% endif %} >Inactive</option>
-                                <option value="1" {% if cus.is_active == 1 %} selected {% endif %} >Active</option>
-                            </select>
+                            <input type="text" class="form-control" name="active" id="active" readonly> 
                         </div>
                     </form>
                 </div>
@@ -167,9 +213,7 @@
                         <div class="form-group">
                             <label for="Active">Active</label>
                             <select name="active" class="form-control" id="active" required="required">
-                                <option value="" ></option>
-                                <option value="0" >Inactive</option>
-                                <option value="1">Active</option>
+                                <option value="0">Inactive</option>
                             </select>
                         </div>
                     </form>
@@ -208,6 +252,7 @@
                     if (response.status === 'success') {
                         alert('Customer updated successfully!');
                         $('#editCustomerModal').modal('hide');  
+                        location.reload();
                     } else {
                         alert('Error: ' + response.message);
                     }
@@ -230,6 +275,7 @@
                     if (response.status === 'success') {
                         alert('Customer added successfully!');
                         $('#addCustomerModal').modal('hide');  
+                        location.reload();
                     } else {
                         alert('Error: ' + response.message);
                     }
@@ -241,6 +287,4 @@
         }
         
     </script>
-
-
 {% endblock content %}

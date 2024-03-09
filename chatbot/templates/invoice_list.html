@@ -1,0 +1,128 @@
+{% extends "header.html" %}
+
+<title>{% block title %} Invoices  {% endblock %}</title>
+{% block content %}
+    <div class="container-fluid px-4">
+        <h1 class="mt-4">Invoice List</h1>
+        <ol class="breadcrumb mb-4">
+            <li class="breadcrumb-item active">List</li>
+        </ol>
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        <form method="POST" action="{% url 'send_invoices' %}"> 
+            {% csrf_token %}
+            <button type="submit" class="btn btn-success">
+                Generate Invoices
+            </button>
+        </form>
+        <div class="row my-4">
+            <div class="col-lg-12 col-12">
+                <div class="custom-block bg-white">
+                    <div class="table-responsive">
+                        <table class="account-table table">
+                            <thead>
+                                <tr>
+                                    <th scope="col">No.</th>
+
+                                    <th scope="col">Tenant </th>
+
+                                    <th scope="col">House</th>
+
+                                    <th scope="col">Due date</th>
+
+                                    <th scope="col">Total Due</th>
+
+                                    <th scope="col">Status</th>
+
+                                    <th scope="col">Action</th>
+
+                                </tr>
+                            </thead>
+
+                            <tbody> 
+                            {% for invoice in invoices %}
+                                <tr>
+                                    <td>{{ invoice.id }}</td>
+            
+                                    <td>{{ invoice.tenant.firstname }} {{ invoice.tenant.lastname }}</td>
+            
+                                    <td>H({{ invoice.tenant.id }})</td>
+                                    
+                                    <td>{{ invoice.date_due }}</td>
+            
+                                    <td>{{ invoice.total_due }}</td>
+            
+                                    <td>
+                                        {% if invoice.is_paid %} 
+                                            <button type="button" class="btn btn-success">Paid</button>
+                                        {% else %} 
+                                            <button type="button" class="btn btn-danger">Unpaid</button>
+                                        {% endif %}</td>
+                                    
+                                    <td scope="row">
+                                        <div class="dropdown">
+                                            <button class="btn btn-primary dropdown-toggle align-middle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots-vertical" viewBox="0 0 16 16">
+                                                    <path fill-rule="evenodd" d="M2 12.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zm0-5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zm0-5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
+                                                </svg>
+                                            </button>
+                                            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                                {% if not invoice.is_paid %}
+                                                <li>
+                                                    <form action="{% url 'generate_payment_link' invoice.id %}" method="post">
+                                                        {% csrf_token %}
+                                                        <button class="dropdown-item" type="submit">Send Link</button>
+                                                    </form>
+                                                </li>
+                                                {% endif %}
+                                                <li><a class="dropdown-item" href="{% url 'view_invoice' invoice.id %}">View</a></li>
+                                                <!-- Add more actions here -->
+                                            </ul>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <nav aria-label="Page navigation example">
+                        <ul class="pagination justify-content-center mb-0">
+                            <li class="page-item">
+                                <a class="page-link" href="#" aria-label="Previous">
+                                    <span aria-hidden="true">Prev</span>
+                                </a>
+                            </li>
+
+                            <li class="page-item active" aria-current="page">
+                                <a class="page-link" href="#">1</a>
+                            </li>
+                            
+                            <li class="page-item">
+                                <a class="page-link" href="#">2</a>
+                            </li>
+                            
+                            <li class="page-item">
+                                <a class="page-link" href="#">3</a>
+                            </li>
+                            
+                            <li class="page-item">
+                                <a class="page-link" href="#" aria-label="Next">
+                                    <span aria-hidden="true">Next</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}

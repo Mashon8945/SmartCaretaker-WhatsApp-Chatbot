@@ -6,6 +6,16 @@
             <li class="breadcrumb-item active">Houses</li>
         </ol>
 
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <div class="row my-4">
             <div class="col-lg-12 col-12">
                 <div class="custom-block bg-white">
@@ -13,12 +23,17 @@
                         <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#addHouseModal">
                             Add New House
                         </button>
+                        <button type="button" class="btn btn-success" data-bs-toggle="modal" data-bs-target="#assignHouseModal">
+                            Assign House
+                        </button>
                         <table class="account-table table">
                             <thead>
                                 <tr>
-                                    <th scope="col">House No.</th>
+                                    <th scope="col">No.</th>
 
                                     <th scope="col">House Type </th>
+
+                                    <th scope="col">House No.</th>
 
                                     <th scope="col">Address</th>
 
@@ -34,11 +49,13 @@
                             </thead>
 
                             <tbody>
-                                {% for house in houses %}
+                                {% for house in page_house %}
                                 <tr>
-                                    <td scope="row">{{ house.id }}</td>
+                                    <td scope="row">{{ index_offset|add:forloop.counter }}</td>
 
-                                    <td scope="row">{{ house.house_type }} H({{ house.id }})</td>
+                                    <td scope="row">{{ house.house_type }} </td>
+
+                                    <td scope="row"> H({{ house.id }})</td>
 
                                     <td scope="row">{{ house.address }}</td>
 
@@ -50,36 +67,54 @@
                                     </td>
 
                                     <td scope="row">
-                                        {% if house.customer_id is Null %}
-                                            {% if house.vacancy == 'Vacant' %}
-                                                <span class="badge text-bg-danger">
-                                                    Vacant
-                                                </span>
-                                            {% else %}
-                                                <span class="badge text-bg-info">
-                                                    Maintenance
-                                                </span>
-                                            {% endif %}
+                                        {% if house.vacancy == 'VACANT' %}
+                                            <span class="badge text-bg-danger">
+                                                Vacant
+                                            </span>
+                                        {% elif house.vacancy == 'MAINTENANCE' %}
+                                            <span class="badge text-bg-info">
+                                                Maintenance
+                                            </span>
+                                        {% elif house.vacancy == 'BOOKED' %}
+                                            <span class="badge text-bg-dark">
+                                                Booked
+                                            </span>
                                         {% else %}
-                                            {% if house.vacancy == 'Booked' %}
-                                                <span class="badge text-bg-dark">
-                                                    Booked
-                                                </span>
-                                            {% else %}
-                                                <span class="badge text-bg-success">
-                                                    Occuppied
-                                                </span>
-                                            {% endif %}
+                                            <span class="badge text-bg-success">
+                                                Occuppied
+                                            </span>
                                         {% endif %}
                                     </td>
                                     <td class="text-success" scope="row">
-                                        <span class="me-1"></span>
-                                        <button class="btn btn-primary" title="edit" data-bs-toggle="modal" data-bs-target="#editHouseModal" onclick="loadHouseDetails({{ house.id }})">
-                                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-pencil" viewBox="0 0 16 16">
-                                                <path d="M12.732.732a.5.5 0 0 1 .708 0l2 2a.5.5 0 0 1 0 .708L2.975 15.225a.5.5 0 0 1-.364.136H2.5a.5.5 0 0 1-.5-.5v-.111a.5.5 0 0 1 .136-.364L13.439 1.439a.5.5 0 0 1 0-.708l-2-2a.5.5 0 0 1-.073-.638l.073-.083 2-2a.5.5 0 0 1 .638-.073l.083.073 2 2zm-1.414.5L1.975 13.225l-.571 1.43 1.43-.571L13.646 1.646l-1.414-1.414zM1.68 14.057l-.584-2.327 2.327.584-.97.97zm1.262.315l.97-.97 2.327.584-.584-2.327-.97.97a.5.5 0 0 1 .707-.707l.97-.97 2.327.583-.97.971a.5.5 0 0 1-.707-.707l.971-.97-2.327-.584.583 2.327.971-.97a.5.5 0 0 1 .707.707l-.97.971.584 2.327-2.327-.584.97-.97a.5.5 0 0 1-.707.707l-.97.97-2.327-.583.97-.971a.5.5 0 0 1 .707.707l-.971.97zm12.442-7.756-2.25-2.25L10.46 4.792l2.25 2.25.708-.707zm-1.06 1.06-2.25-2.25-.707.707 2.25 2.25.707-.707zm-3.182-3.182-2.25-2.25L7.277 2.61 9.527 4.86l.708-.707zM6.445 3.445l-2.25-2.25-.707.707 2.25 2.25.707-.707z"/>
-                                            </svg>
-                                        </button>
+                                        <div class="dropdown">
+                                            <button class="btn btn-primary dropdown-toggle align-middle" type="button" id="dropdownMenuButton" data-bs-toggle="dropdown" aria-expanded="false">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-three-dots-vertical" viewBox="0 0 16 16">
+                                                    <path fill-rule="evenodd" d="M2 12.5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zm0-5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5zm0-5a.5.5 0 0 1 .5-.5h11a.5.5 0 0 1 0 1h-11a.5.5 0 0 1-.5-.5z"/>
+                                                </svg>
+                                            </button>
+                                            <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
+                                                {% for assignment in assignments %}
+                                                    {% if assignment.house == house %}
+                                                    <li>
+                                                        <form action="{% url 'unassign_house' assignment.id %}" method="post">
+                                                            {% csrf_token %}
+                                                            <button class="dropdown-item" type="submit">Unassign Tenant</button>
+                                                        </form>
+                                                    </li>
+                                                    {% endif %}
+                                                {% endfor %}
+                                                <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editHouseModal" onclick="loadHouseDetails({{ house.id }})" >Edit House</button></li>
+                                                <li>
+                                                    <form method="post" action="{% url 'delete_house' house.id %}">
+                                                        {% csrf_token %}
+                                                        <button type="submit" class="dropdown-item" onclick="alert(Do you want to delete a house?)" style="color: red">Delete</button>
+                                                    </form>
+                                                </li>
+                                                <!-- Add morace tions here -->
+                                            </ul>
+                                        </div>
                                     </td>
+                                    
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -88,28 +123,33 @@
 
                     <nav aria-label="Page navigation example">
                         <ul class="pagination justify-content-center mb-0">
+                            
                             <li class="page-item">
-                                <a class="page-link" href="#" aria-label="Previous">
+                                {% if page_house.has_previous %}
+                                <a class="page-link" href="?page={{ page_house.previous_page_number }}" aria-label="Previous">
                                     <span aria-hidden="true">Prev</span>
                                 </a>
+                                {% endif %}
                             </li>
 
                             <li class="page-item active" aria-current="page">
-                                <a class="page-link" href="#">1</a>
+                                <a class="page-link" >{{ page_house.number }}</a>
                             </li>
                             
                             <li class="page-item">
-                                <a class="page-link" href="#">2</a>
+                                <a class="page-link">of</a>
                             </li>
                             
                             <li class="page-item">
-                                <a class="page-link" href="#">3</a>
+                                <a class="page-link">{{ page_house.paginator.num_pages }}</a>
                             </li>
                             
                             <li class="page-item">
-                                <a class="page-link" href="#" aria-label="Next">
+                                {% if page_house.has_next %}
+                                <a class="page-link" href="?page={{ page_house.next_page_number }}" aria-label="Next">
                                     <span aria-hidden="true">Next</span>
                                 </a>
+                                {% endif %}
                             </li>
                         </ul>
                     </nav>
@@ -117,12 +157,13 @@
             </div>
         </div>
     </div>
+
     <!-- The Edit House Modal -->
     <div class="modal fade" id="editHouseModal" tabindex="-1" role="dialog" aria-labelledby="editHouseModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="editHouseModalLabel">Edit Tenant Details</h5>
+                    <h5 class="modal-title" id="editHouseModalLabel">Edit House Details</h5>
                     <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
                         <span aria-hidden="true">&times;</span>
                     </button>
@@ -148,21 +189,12 @@
                             <input type="text" name="rent" class="form-control" id="rent" required="required">
                         </div>
                         <div class="form-group">
-                            <label for="tenant">Tenant</label>
-                            <select name="tenant" class="form-control"  id="tenant" required="required">
-                                <option value=""></option>
-                                {% for cust in tenants %}
-                                        <option value="{{ cust.id }}" {% if cust.id == houses.customer_id %} selected {% endif %} > {{ cust.firstname }} {{ cust.lastname }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-group">
                             <label for="status">Status</label>
-                            <select readonly name="status" class="form-control" id="status" required="required">
-                                <option value="Occuppied" {% if houses.vacancy == 'Occuppied' %} selected {% endif %} > Occuppied </option>
-                                <option value="Vacant" {% if houses.vacancy == 'Vacant' %} selected {% endif %} > Vacant</option>
-                                <option value="Booked" {% if houses.vacancy == 'Booked' %} selected {% endif %} > Booked</option>
-                                <option value="Maintenance" {% if houses.vacancy == 'Maintenance' %} selected {% endif %} > Maintenance</option>
+                            <select name="status" class="form-control" id="status" required="required">
+                                <option value="OCCUPIED" {% if page_house.vacancy == 'OCCUPIED' %} selected {% endif %} > Occuppied </option>
+                                <option value="VACANT" {% if page_house.vacancy == 'VACANT' %} selected {% endif %} > Vacant</option>
+                                <option value="BOOKED" {% if page_house.vacancy == 'BOOKED' %} selected {% endif %} > Booked</option>
+                                <option value="MAINTENANCE" {% if page_house.vacancy == 'MAINTENANCE' %} selected {% endif %} > Maintenance</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -174,6 +206,32 @@
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-primary" onclick="saveHouseChanges()">Save Changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- The Assign House Modal -->
+    <div class="modal fade" id="assignHouseModal" tabindex="-1" role="dialog" aria-labelledby="assignHouseModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="assignHouseModalLabel">Assign House</h5>
+                    <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <!-- Form for editing house -->
+                    <form id="assignHouseForm" action="{% url 'homes' %}" method="POST">
+                        {% csrf_token %}
+                        {{ form.as_p }}
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary" onclick="assignHouse()">Save Changes</button>
                 </div>
             </div>
         </div>
@@ -221,22 +279,13 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="tenant">Tenant</label>
-                            <select name="tenants" class="form-control" id="tenants" required="required">
-                                <option value=""></option>
-                                {% for x in tenants %}
-                                    <option value="{{x.id}}"> {{x.firstname }} {{x.lastname}}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                        <div class="form-group">
                             <label for="status">Status</label>
                             <select name="status" class="form-control" id="status" required="required">
                                 <option value=""></option>
-                                <option value="Vacant"> Vacant</option>
-                                <option value="Occuppied"> Occuppied</option>
-                                <option value="Booked"> Booked</option>
-                                <option value="Maintenance"> Maintenance</option>
+                                <option value="VACANT"> Vacant</option>
+                                <option value="OCCUPIED"> Occupied</option>
+                                <option value="BOOKED"> Booked</option>
+                                <option value="MAINTENANCE"> Maintenance</option>
                             </select>
                         </div>
                     </form>
@@ -256,9 +305,7 @@
                 $('#address').val(data.address); 
                 $('#city').val(data.city); 
                 $('#rent').val(data.rent); 
-                $('#status').val(data.status); 
-                $('#tenant').val(data.tenant); 
-                
+                $('#status').val(data.status);                 
             }).fail(function() {
                 console.error('Error fetching customer details');
             });
@@ -277,6 +324,7 @@
                     if (response.status === 'success') {
                         alert('House updated successfully!');
                         $('#editHouseModal').modal('hide');  
+                        location.reload();
                     } else {
                         alert('Error: ' + response.message);
                     }
@@ -299,13 +347,38 @@
                 success: function(response) {
                     if (response.status === 'success') {
                         alert('House added successfully!');
-                        $('#addHouseModal').modal('hide');  
+                        $('#addHouseModal').modal('hide'); 
+                        location.reload();
                     } else {
                         alert('Error: ' + response.message);
                     }
                 },
                 error: function() {
                     alert('An error occurred while adding a house.');
+                }
+            });
+        }
+
+        function assignHouse() {
+            var formData = $('#assignHouseForm').serialize();  
+            $.ajax({
+                type: 'POST',
+                url: '/homes/',  
+                data: formData,
+                beforeSend: function(xhr) {
+                    xhr.setRequestHeader("X-CSRFToken", "{{ csrf_token }}");
+                },
+                success: function(response) {
+                    if (response.status === 'success') {
+                        alert('Tenant assigned to a house successfully!');
+                        $('#assignHouseModal').modal('hide');  
+                        location.reload();
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                },
+                error: function() {
+                    alert('An error occurred while assigning tenant to a house.');
                 }
             });
         }

@@ -70,12 +70,12 @@
                                 Tenants
                                 <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
                             </a>
-                            <a class="nav-link collapsed" href="#" aria-expanded="false" aria-controls="collapseLayouts">
+                            <a class="nav-link collapsed" href="{% url 'transactions' %}" aria-expanded="false" aria-controls="collapseLayouts">
                                 <div class="sb-nav-link-icon"><i class="custom-block-icon bi-send"></i></div>
                                 Transactions
                                 <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
                             </a>
-                            <a class="nav-link collapsed" href="#"  aria-expanded="false" aria-controls="collapseLayouts">
+                            <a class="nav-link collapsed" href="{% url 'invoice_list' %}"  aria-expanded="false" aria-controls="collapseLayouts">
                                 <div class="sb-nav-link-icon"><i class="bi-wallet me-2"></i></div>
                                 Invoices
                                 <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
@@ -85,7 +85,7 @@
                                 Houses
                                 <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
                             </a>
-                            <a class="nav-link collapsed" href="#" data-bs-toggle="collapse" data-bs-target="#collapseLayouts" aria-expanded="false" aria-controls="collapseLayouts">
+                            <a class="nav-link collapsed" href="{% url 'notice' %}"  aria-expanded="false" aria-controls="collapseLayouts">
                                 <div class="sb-nav-link-icon"><i class="bi-bell"></i></div>
                                 Notices
                                 <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
@@ -94,8 +94,8 @@
                     </div>
                     <div class="sb-sidenav-footer">
                         <div class="small">Logged in as:</div>
-                        {% if user.first_name %}
-                                {{ user.first_name }} {{ user.last_name }}
+                        {% if user.first_name and user.last_name %}
+                            {{ user.first_name }} {{ user.last_name }}
                         {% endif %}
                     </div>
                 </nav>

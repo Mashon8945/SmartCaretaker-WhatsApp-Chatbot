@@ -1,0 +1,50 @@
+{% extends "header.html" %}
+{% block content %}
+
+<div class="container-fluid px-4">
+    <h1 class="mt-4">Notices</h1>
+    <ol class="breadcrumb mb-4">
+        <li class="breadcrumb-item active">Notices</li>
+    </ol>
+    <div class="container-fluid">
+        <!-- Row -->
+        <div class="row"> 
+            <div class="col-lg-12 col-md-6">
+                <div class="card">
+                    <div class="card-body">
+                        <h4 class="card-title">Notice Board <i class="mdi mdi-bell"></i>
+                            <sup style="color:red">2</sup>
+                        </h4>
+                    </div>
+                    <div class="card-body" style="overflow: visible;">
+                        <div class="table-responsive slimScrollDiv" style="height: 300px;">
+                            <table class="table table-hover table-bordered earning-box ">
+                                <thead>
+                                    <tr>
+                                        <th scope="col">No.</th>
+                                        <th scope="col">Sender</th>
+                                        <th scope="col">Message</th>
+                                        <th scope="col">Time</th>
+                                        <th scope="col">Action </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                {% for message in messages %}
+                                    <tr>
+                                        <td scope="row">{{ forloop.counter }}</td>
+                                        <td scope="row">{{ message.name }}</td>
+                                        <td scope="row">{{ message.content }}</a></td>
+                                        <td scope="row">{{ message.timestamp }}</td>
+                                        <td class="action-column"></td>
+                                    </tr>
+                                {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}

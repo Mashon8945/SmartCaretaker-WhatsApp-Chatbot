@@ -18,8 +18,8 @@
             <div class="col-xl-3 col-md-6">
                 <div class="card bg-primary text-white mb-4">
                     <div class="card-body d-flex justify-content-between align-items-center">
-                        <div>Tenants</div>
-                        <strong><span>{{ tenants }}</span></strong>
+                        <div>Total Houses</div>
+                        <strong><span>{{ total_houses }}</span></strong>
                     </div>
                     <div class="card-footer d-flex align-items-center justify-content-between">
                         <a class="small text-white stretched-link" href="{% url 'tenants' %}">View Details</a>
@@ -30,7 +30,7 @@
             <div class="col-xl-3 col-md-6">
                 <div class="card bg-warning text-white mb-4">
                     <div class="card-body d-flex justify-content-between align-items-center">
-                        <div>Vaccant Houses</div>
+                        <div>Vacant Houses</div>
                         <strong><span>{{ vacant }}</span></strong>
                     </div>
                     <div class="card-footer d-flex align-items-center justify-content-between">
@@ -42,8 +42,8 @@
             <div class="col-xl-3 col-md-6">
                 <div class="card bg-success text-white mb-4">
                     <div class="card-body d-flex justify-content-between align-items-center">
-                        <div>Tenants</div>
-                        <strong><span>45</span></strong>
+                        <div>Active Tenants</div>
+                        <strong><span>{{ active_tenants }}</span></strong>
                     </div>
                     <div class="card-footer d-flex align-items-center justify-content-between">
                         <a class="small text-white stretched-link" href="#">View Details</a>
@@ -54,8 +54,8 @@
             <div class="col-xl-3 col-md-6">
                 <div class="card bg-danger text-white mb-4">
                     <div class="card-body d-flex justify-content-between align-items-center">
-                        <div>Tenants</div>
-                        <strong><span>45</span></strong>
+                        <div>Inactive Tenants</div>
+                        <strong><span>{{ inactive_tenants }}</span></strong>
                     </div>
                     <div class="card-footer d-flex align-items-center justify-content-between">
                         <a class="small text-white stretched-link" href="#">View Details</a>
@@ -67,7 +67,7 @@
         <div class="container-fluid">
             <!-- Row -->
             <div class="row"> 
-                <div class="col-lg-8">
+                <div class="col-lg-7">
                     <div class="card">
                         <div class="card-body">
                             <h4 class="card-title">Notice Board <i class="mdi mdi-bell"></i>
@@ -87,15 +87,50 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                    {% for message in messages %}
+                                        {% for message in messages %}
                                         <tr>
                                             <td scope="row">{{ forloop.counter }}</td>
-                                            <td scope="row">{{ message.name }}</td>
+                                            <td scope="row">{{ message.firstname }} {{ message.lastname }}</td>
                                             <td scope="row">{{ message.content }}</a></td>
                                             <td scope="row">{{ message.timestamp }}</td>
-                                            <td class="action-column"></td>
+                                            <td class="action-row"><a href="" class="icon icon-md"></td>
                                         </tr>
-                                    {% endfor %}
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-5">
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="card-title">New Transactions <i class="mdi mdi-bell"></i>
+                                <sup style="color:red">2</sup>
+                            </h4>
+                        </div>
+                        <div class="card-body" style="">
+                            <div class="table-responsive slimScrollDiv" style="height: 300px;">
+                                <table class="table table-hover table-bordered earning-box ">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col">No.</th>
+                                            <th scope="col">Name</th>
+                                            <th scope="col">Transaction type</th>
+                                            <th scope="col">Amount</th>
+                                            <th scope="col">Action </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for message in messages %}
+                                        <tr>
+                                            <td scope="row">{{ forloop.counter }}</td>
+                                            <td scope="row">{{ message.firstname }} {{ message.lastname }}</td>
+                                            <td scope="row">{{ message.content }}</a></td>
+                                            <td scope="row">{{ message.timestamp }}</td>
+                                            <td class="action-row"><a href="" class="icon icon-md"></td>
+                                        </tr>
+                                        {% endfor %}
                                     </tbody>
                                 </table>
                             </div>
