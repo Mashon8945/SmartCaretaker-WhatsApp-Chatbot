@@ -362,7 +362,7 @@ def update_Customer(request):
         phone = request.POST.get('phone')
         active = request.POST.get('active')
 
-        if not all([customer_id, firstname, lastname, email, phone]):
+        if not all([customer_id, firstname, lastname, email, phone, active ]):
             return HttpResponseBadRequest('Missing Fields')
 
         try:
@@ -407,8 +407,16 @@ def delete_customer(request, customer_id):
 
 @login_required(login_url='/login/')
 def transactions(request):
-    transaction = Transactions.objects.all().order_by('-date')
-    return render(request, 'transactions.html', {'transaction':transaction})
+    transactions = Paginator(Transactions.objects.all().order_by('-date'), 10)
+    transaction_page = request.GET.get('page')
+    transaction = transactions.get_page(transaction_page)
+
+    page_number = request.GET.get('page', 1) 
+    items_per_page = 10 
+    index_offset = (int(page_number) - 1) * items_per_page
+
+    return render(request, 'transactions.html', {'transaction':transaction, 'index_offset': index_offset})
+
 
 
 def generate_payment_link(request, invoice_id):
@@ -461,30 +469,32 @@ def send_invoices(request):
         existing_invoice = Invoice.objects.filter(
             tenant=customer,
             date__month=current_date.month,
-            date__year=current_date.year,
-            is_paid=False
+            date__year=current_date.year
         ).exists()
 
         if not existing_invoice:
-            try:
-                rent_amount = Decimal(dict(Houses.HouseRent.choices)[house.House_rent])
-            except KeyError:
-                raise ValidationError('Invalid rent amount for house type.')
+            rent_choices = dict(Houses.HouseRent.choices)
+            rent_amount_str = house.House_rent
 
-            new_invoice = Invoice(
-                tenant=customer,
-                house=house,
-                date_due=current_date + timezone.timedelta(days=30),  # Due in 30 days from now
-                amount_due=rent_amount,
-                total_due=rent_amount,  # Assuming no arrears, fines, or maintenance fees for simplicity
-                payment_uuid=uuid.uuid4()  # Unique payment identifier
-            )
-            new_invoice.save()
-            messages.success(request, 'Invoices generated and send to all tenants')
+            if rent_amount_str in rent_choices:
+                rent_amount = Decimal(rent_choices[rent_amount_str])
 
-            # Logic to send invoices to tenants goes here
-            # You can use the `new_invoice.payment_uuid` to create a payment link
-            # ...
+                new_invoice = Invoice(
+                    tenant=customer,
+                    house=house,
+                    date_due=current_date + timezone.timedelta(days=30),  # Due in 30 days from now
+                    amount_due=rent_amount,
+                    total_due=rent_amount,  # Assuming no arrears, fines, or maintenance fees for simplicity
+                    payment_uuid=uuid.uuid4()  # Unique payment identifier
+                )
+                new_invoice.save()
+                messages.success(request, f'Invoice generated for house H({house.id}) and send to tenant')
+
+                # Logic to send invoices to tenants goes here
+                # You can use the `new_invoice.payment_uuid` to create a payment link
+                # ...
+            else:
+                messages.error(request, f'Invalid rent amount for house H({house.id})')
 
     return redirect('invoice_list')
 
@@ -493,8 +503,15 @@ def view_invoice(request, invoice_id):
     return render(request, 'invoice.html', {'invoice': invoice})
 
 def invoice_list(request):
-    invoices = Invoice.objects.all().order_by('-date')
-    return render(request, 'invoice_list.html', {'invoices': invoices})
+    invoice = Paginator(Invoice.objects.all().order_by('-date'), 10)
+    invoice_page = request.GET.get('page')
+    invoices = invoice.get_page(invoice_page)
+
+    page_number = request.GET.get('page', 1) 
+    items_per_page = 10 
+    index_offset = (int(page_number) - 1) * items_per_page
+
+    return render(request, 'invoice_list.html', {'invoices': invoices, 'index_offset': index_offset})
 
 
 def payment_form(request, payment_uuid):

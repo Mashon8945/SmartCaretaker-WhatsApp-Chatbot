@@ -83,12 +83,14 @@
                                             <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton">
                                                 <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editCustomerModal" onclick="loadCustomerDetails({{ cust.id }})" >Edit Tenant</button></li>
                                                 <!-- Add morace tions here -->
+                                                {% if cust.is_active == 0 %}
                                                 <li>
                                                     <form action="{% url 'delete_customer' cust.id %}" method="post">
                                                         {% csrf_token %}
                                                         <button type="submit" class="dropdown-item" style="color: red;">Delete Tenant</button>
                                                     </form>
                                                 </li>
+                                                {% endif %}
                                             </ul>
                                         </div>
                                     </td>

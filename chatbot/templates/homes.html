@@ -104,12 +104,14 @@
                                                     {% endif %}
                                                 {% endfor %}
                                                 <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editHouseModal" onclick="loadHouseDetails({{ house.id }})" >Edit House</button></li>
+                                                {% if house.vacancy == 'VACANT' %}
                                                 <li>
                                                     <form method="post" action="{% url 'delete_house' house.id %}">
                                                         {% csrf_token %}
                                                         <button type="submit" class="dropdown-item" onclick="alert(Do you want to delete a house?)" style="color: red">Delete</button>
                                                     </form>
                                                 </li>
+                                                {% endif %}
                                                 <!-- Add morace tions here -->
                                             </ul>
                                         </div>
@@ -191,7 +193,6 @@
                         <div class="form-group">
                             <label for="status">Status</label>
                             <select name="status" class="form-control" id="status" required="required">
-                                <option value="OCCUPIED" {% if page_house.vacancy == 'OCCUPIED' %} selected {% endif %} > Occuppied </option>
                                 <option value="VACANT" {% if page_house.vacancy == 'VACANT' %} selected {% endif %} > Vacant</option>
                                 <option value="BOOKED" {% if page_house.vacancy == 'BOOKED' %} selected {% endif %} > Booked</option>
                                 <option value="MAINTENANCE" {% if page_house.vacancy == 'MAINTENANCE' %} selected {% endif %} > Maintenance</option>
@@ -283,7 +284,6 @@
                             <select name="status" class="form-control" id="status" required="required">
                                 <option value=""></option>
                                 <option value="VACANT"> Vacant</option>
-                                <option value="OCCUPIED"> Occupied</option>
                                 <option value="BOOKED"> Booked</option>
                                 <option value="MAINTENANCE"> Maintenance</option>
                             </select>
