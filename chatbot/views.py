@@ -20,6 +20,7 @@ from twilio.twiml.messaging_response import MessagingResponse
 from django.core.paginator import Paginator
 from django.utils import timezone
 import uuid
+import json
 from django.urls import reverse
 from django.core.exceptions import ValidationError
 
@@ -135,29 +136,54 @@ def dashboard(request):
     }
     return render(request, 'index.html', context)
 
+@require_POST
 @csrf_exempt
-def whatsapp(request):
+def whatsapp_webhook(request):
     if request.method == 'POST':
         sender = request.POST.get("From", "")
         receiver = request.POST.get("To", "")
-        body = request.POST.get("Body", "")
+        body = request.POST.get("Body", "").strip().lower()  # Convert to lowercase for case-insensitive comparison
 
-        WhatsappMessage.objects.create(sender = sender, receiver = receiver, body = body)
+        # Save the incoming message to the database
+        # WhatsappMessage.objects.create(sender=sender, receiver=receiver, body=body)
+
         response = MessagingResponse()
 
-        tenant = Customers.objects.filter(phone=sender).values()  
-        
+        # Check if the sender is an existing tenant
+        tenant = Customers.objects.filter(phone=sender).values()
         if tenant.exists():
             first_tenant = tenant[0]
             firstname = first_tenant['firstname']
-            response.message(f"Hi {firstname}, Thank you for contacting Smart Caretaker! A member of our team will be in touch with you soon.")
-            return HttpResponse(str(response), status=200)
+
+            if body == "hello":
+                content_sid = "HXc23d0cc382ff47ba37d06175fa3b5ad2"
+                content_variables = {"1": firstname}
+                response.message(body=None, content_sid=content_sid, content_variables=content_variables)
+                return HttpResponse(str(response), content_type='application/xml')
+
+            elif body.startswith('{') and body.endswith('}'):
+                try:
+                    # Parse the JSON response
+                    message_data = json.loads(body)
+                    if 'interactive' in message_data:
+                        list_reply = message_data.get('interactive', {}).get('list_reply', {})
+                        # Extract the user's selection
+                        identifier = list_reply.get('id', '')
+                        # Implement your logic based on the user's selection here
+                        # For example, respond with the selection identifier
+                        response.message(f"Hello {firstname}, you selected: {identifier}")
+                except json.JSONDecodeError:
+                    response.message("There was an error processing your selection. Please try again.")
+            else:
+                response.message(f"Hello {firstname},")
         else:
-            response.message("We couldn't find your information in our records. Please contact support for assistance")
-            return HttpResponse(str(response), status=200)
-    else: 
-        return HttpResponse("Invalid request", status = 200)
-    
+            response.message("We couldn't find your information in our records. Please contact support for assistance.")
+
+        return HttpResponse(str(response), content_type='application/xml', status=200)
+
+    else:
+        return HttpResponse("Invalid request", content_type='application/xml', status=400)
+
 @login_required(login_url='/login/')
 def homes(request):
     tenants = Customers.objects.all()
@@ -263,6 +289,7 @@ def delete_house(request, house_id):
 
 
 @require_POST
+@login_required(login_url='/login/')
 def update_homes(request):
     if request.method == 'POST':
         house_id = request.POST.get('id')
@@ -353,6 +380,7 @@ def add_customer(request):
 
 
 @require_POST
+@login_required(login_url='/login/')
 def update_Customer(request):
     if request.method == 'POST':
         customer_id = request.POST.get('id')
@@ -360,9 +388,8 @@ def update_Customer(request):
         lastname = request.POST.get('lastname')
         email = request.POST.get('email')
         phone = request.POST.get('phone')
-        active = request.POST.get('active')
 
-        if not all([customer_id, firstname, lastname, email, phone, active ]):
+        if not all([customer_id, firstname, lastname, email, phone ]):
             return HttpResponseBadRequest('Missing Fields')
 
         try:
@@ -371,7 +398,6 @@ def update_Customer(request):
             customer.lastname = lastname
             customer.phone = phone
             customer.email = email
-            customer.is_active = active
             customer.save()
 
             return JsonResponse({'status': 'success', 'message': 'Customer updated successfully!'})
@@ -418,7 +444,7 @@ def transactions(request):
     return render(request, 'transactions.html', {'transaction':transaction, 'index_offset': index_offset})
 
 
-
+@login_required(login_url='/login/')
 def generate_payment_link(request, invoice_id):
     try:
         invoice = Invoice.objects.get(id=invoice_id)
@@ -453,7 +479,7 @@ def generate_payment_link(request, invoice_id):
     """
     return redirect('invoice_list')
 
-
+@login_required(login_url='/login/')
 def send_invoices(request):
     occupied_houses = Houses.objects.exclude(vacancy='VACANT')
     current_date = timezone.now().date()
@@ -498,10 +524,12 @@ def send_invoices(request):
 
     return redirect('invoice_list')
 
+@login_required(login_url='/login/')
 def view_invoice(request, invoice_id):
     invoice = Invoice.objects.get(id=invoice_id)
     return render(request, 'invoice.html', {'invoice': invoice})
 
+@login_required(login_url='/login/')
 def invoice_list(request):
     invoice = Paginator(Invoice.objects.all().order_by('-date'), 10)
     invoice_page = request.GET.get('page')

@@ -1,4 +1,5 @@
 {% extends "header.html" %}
+{% load static %}
 
 <title>{% block title %} Invoices  {% endblock %}</title>
 {% block content %}
@@ -7,9 +8,8 @@
         <ol class="breadcrumb mb-4">
             <li class="breadcrumb-item active">List</li>
         </ol>
-        
         {% if messages %}
-        <div class="messages">
+        <div class="message">
             {% for message in messages %}
                 {% if message.tags == 'success' %}
                 <div class="alert alert-{{ message.tags }}">

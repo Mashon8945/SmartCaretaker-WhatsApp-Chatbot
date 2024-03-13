@@ -9,7 +9,7 @@ urlpatterns = [
     path('logout/', auth_views.LogoutView.as_view(next_page='login_owner'), name='logout'),
 
     path('dashboard/', views.dashboard, name='dashboard'),
-    path('dashboard/message/', views.whatsapp, name='whatsapp' ),
+    path('dashboard/message/', views.whatsapp_webhook, name='whatsapp-webhook' ),
 
     path('homes/', views.homes, name='homes'),
     path('homes/add/', views.add_homes, name='add_homes'),

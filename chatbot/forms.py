@@ -15,3 +15,50 @@ class AssignmentForm(forms.ModelForm):
 
         self.fields['tenant'].queryset = Customers.objects.filter(is_active=False)
         self.fields['house'].queryset = Houses.objects.filter(vacancy__in=['VACANT', 'BOOKED'])
+
+        
+""" 
+choice_list = {
+                    "type": "interactive",
+                    "interactive": {
+                        "type": "list",
+                        "header": {
+                            "type": "text",
+                            "text": "Choose an action:"
+                        },
+                        "body": {
+                            "text": f"Hello {firstname},\nWe hope you're doing well!\nTo better assist you, please select from the following options:"
+                        },
+                        "action": {
+                            "button": "Actions",
+                            "sections": [
+                                {
+                                    "title": "Options",
+                                    "rows": [
+                                        {
+                                            "id": "1",
+                                            "title": "Rent Payment",
+                                            "description": "rent payment"
+                                        },
+                                        {
+                                            "id": "2",
+                                            "title": "Inquire rent arrears",
+                                            "description": "rent arrears"
+                                        },
+                                        {
+                                            "id": "3",
+                                            "title": "Request Statement",
+                                            "description": "statement"
+                                        },
+                                        {
+                                            "id": "4",
+                                            "title": "Other(Please specify)",
+                                            "description": "other"
+                                        }
+                                    ]
+                                }
+                            ]
+                        }
+                    }
+                }
+"""
