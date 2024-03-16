@@ -5,6 +5,10 @@ from django.contrib.auth import login, authenticate
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.decorators import login_required
 from twilio.rest import Client
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.lib import colors
+from SmartCaretaker import settings
 from .models import Owner, Houses, Customers, WhatsappMessage, Assignment, Transactions, Invoice
 from .forms import AssignmentForm
 from django.views.decorators.http import require_POST
@@ -21,8 +25,14 @@ from django.core.paginator import Paginator
 from django.utils import timezone
 import uuid
 import json
+import requests
+import os
+from django.db.models import Sum
 from django.urls import reverse
 from django.core.exceptions import ValidationError
+from django.core.files.storage import FileSystemStorage
+from reportlab.pdfgen import canvas
+from io import BytesIO
 
 # Create your views here.
 def landing(request):
@@ -108,6 +118,8 @@ def dashboard(request):
     two_days_ago = current_time - timedelta(days=2)
     recent_messages = WhatsappMessage.objects.filter(timestamp__gte=two_days_ago).order_by('-timestamp')
 
+    recent_trasactions = Transactions.objects.all().order_by('-id')
+
     active_tenants = Customers.objects.filter(is_active = 1).count()
     inactive_tenants = Customers.objects.filter(is_active = 0).count()
     total_houses = Houses.objects.all().count()
@@ -144,45 +156,155 @@ def whatsapp_webhook(request):
         receiver = request.POST.get("To", "")
         body = request.POST.get("Body", "").strip().lower()  # Convert to lowercase for case-insensitive comparison
 
-        # Save the incoming message to the database
-        # WhatsappMessage.objects.create(sender=sender, receiver=receiver, body=body)
-
         response = MessagingResponse()
+        client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        
+        # Define the text-based options
+        text_options = "Menu\n1. Rent Payment\n2. Inquire Rent Arrears\n3. Request Statement\n4. Other"
 
         # Check if the sender is an existing tenant
         tenant = Customers.objects.filter(phone=sender).values()
         if tenant.exists():
             first_tenant = tenant[0]
             firstname = first_tenant['firstname']
+            id = first_tenant['id']
 
-            if body == "hello":
-                content_sid = "HXc23d0cc382ff47ba37d06175fa3b5ad2"
-                content_variables = {"1": firstname}
-                response.message(body=None, content_sid=content_sid, content_variables=content_variables)
-                return HttpResponse(str(response), content_type='application/xml')
+            if body == 'hello':
+                message = client.messages.create(
+                    to=sender,
+                    from_=receiver,
+                    body=f"Hello {firstname},\n\nWe hope you're doing well!\nTo better assist you, please select from the following options:\n{text_options}"
+                )
 
-            elif body.startswith('{') and body.endswith('}'):
-                try:
-                    # Parse the JSON response
-                    message_data = json.loads(body)
-                    if 'interactive' in message_data:
-                        list_reply = message_data.get('interactive', {}).get('list_reply', {})
-                        # Extract the user's selection
-                        identifier = list_reply.get('id', '')
-                        # Implement your logic based on the user's selection here
-                        # For example, respond with the selection identifier
-                        response.message(f"Hello {firstname}, you selected: {identifier}")
-                except json.JSONDecodeError:
-                    response.message("There was an error processing your selection. Please try again.")
+                print(f"Message sent! Message SID: {message.sid}")
+
+            elif body.isdigit():
+                option = int(body)
+                if option == 1:
+                    invoice_id = Invoice.objects.get(tenant_id=id).tenant_id
+                    payment_link = generate_payment_link(request, invoice_id)
+                    if payment_link:
+                        response.message(f"Hello {firstname}, here is your one-time payment link: {payment_link}")
+                    else:
+                        response.message("Invoice not found.")
+
+                # Inquire about rent arrears
+                elif option == 2:
+                    arrears_amount = Invoice.objects.filter(tenant_id=id).aggregate(Sum('arrears'))['arrears__sum'] or 0
+                    response.message(f"Hello {firstname}, your current rent arrears amount is: {arrears_amount}")
+
+                # Request statement
+                elif option == 3:
+                    # Logic to generate PDF
+                    buffer = BytesIO()
+                    doc = SimpleDocTemplate(buffer, pagesize=letter)
+                    content = []
+
+                    pdf = canvas.Canvas(buffer)
+
+                    # Add a header
+                    content.append(pdf.drawString(100, 750, "Smart Caretaker"))
+
+                    # Create data for the table
+                    data = [['Transaction ID', 'Amount', 'Date']]
+
+                    transactions = Transactions.objects.filter(tenant_id=id)
+                    
+                    if transactions.exists(): 
+                        pdf.drawString(100, 750, f"Hello {firstname}, here is your statement:")
+                        y_position = 730  # Initial y position for drawing text
+
+                        for transaction in transactions:
+                            data.append([transaction.id, transaction.amount, transaction.date])
+
+                        # Create a table with the data
+                        table = Table(data)
+
+                        # Add style to the table
+                        style = TableStyle([
+                            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                            ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                        ])
+                        table.setStyle(style)
+
+                        # Add the table to the content
+                        content.append(table)
+
+                        # Build the PDF
+                        doc.build(content)
+                        buffer.seek(0)
+
+
+                        # Save PDF to a file
+                        try:
+                            fs = FileSystemStorage(location=r'C:\Users\Leona\Desktop\Smart Caretaker\Chatbot\static\statements')
+                            filename = 'statement.pdf'
+                            pdf_path = fs.save(filename, buffer)
+
+                            pdf_url = fs.url(pdf_path)
+                            print(f"PDF saved at: {pdf_url}")
+
+                            # Send the PDF as a media message
+                            try:
+                                message = client.messages.create(
+                                    to=sender,
+                                    from_=receiver,
+                                    media_url=[request.build_absolute_uri(pdf_url)]
+                                )
+
+                                print(f"Media message sent! Message SID: {message.sid}")
+                            except Exception as e:
+                                print(f"Error sending media message: {e}")
+                                response.message("Error sending media message. Please try again later.")
+                        except Exception as e:
+                            print(f"Error saving PDF: {e}")
+                            response.message("Please try again later.")
+
+                elif option == 4:
+                    # Prompt the user to specify their inquiry
+                    response.message(f"Hello {firstname}, please type and specify your inquiry.")
+
+                    next_message_body = listen_for_next_message(sender)  # This function should capture the next message from the user
+
+                    if next_message_body:
+                        WhatsappMessage.objects.create(sender=sender, body=next_message_body, receiver=receiver)
+                        response.message(f"Thank you {firstname}, we have received your message. Our team will get back to you shortly.")
+                    else:
+                        response.message("No message received. Please try again later.")
+                else:
+                    response.message(f"Hello {firstname}, please select a valid option or send 'menu' to see options again.")
+
+            # Provide main menu
+            elif body == 'menu':
+                response.message(f"Hello {firstname},\n\nPlease select from the following options:\n{text_options}")
             else:
-                response.message(f"Hello {firstname},")
+                response.message("We couldn't find your information in our records. Please contact support for assistance.")
+
+            return HttpResponse(str(response), content_type='application/xml', status=200)
         else:
-            response.message("We couldn't find your information in our records. Please contact support for assistance.")
+            return HttpResponse("Invalid request", content_type='application/xml', status=400)
 
-        return HttpResponse(str(response), content_type='application/xml', status=200)
 
+def listen_for_next_message(sender):
+    # Initialize Twilio client
+    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+
+    # Fetch recent messages from Twilio
+    messages = client.messages.list(to=sender, limit=1)  # Limit to 1 message for simplicity
+
+    # Check if there are any incoming messages
+    if messages:
+        message_body = messages[0].body  # Get the body of the first message
+        return message_body
     else:
-        return HttpResponse("Invalid request", content_type='application/xml', status=400)
+        return None
+
+
 
 @login_required(login_url='/login/')
 def homes(request):
@@ -444,7 +566,6 @@ def transactions(request):
     return render(request, 'transactions.html', {'transaction':transaction, 'index_offset': index_offset})
 
 
-@login_required(login_url='/login/')
 def generate_payment_link(request, invoice_id):
     try:
         invoice = Invoice.objects.get(id=invoice_id)
@@ -456,27 +577,9 @@ def generate_payment_link(request, invoice_id):
         payment_link = request.build_absolute_uri(reverse('payment_form', kwargs={'payment_uuid': payment_uuid}))
         print(payment_link)
         messages.success(request, 'Link has been sent successfully')
+        return payment_link
     except Invoice.DoesNotExist:
         messages.error(request, 'Invoice does not exist')
-    """
-    # Compose the message with the payment link
-    message = f'Please use the following link to make your rent payment: {payment_link}'
-    
-    # Define the recipient's phone number (replace with the tenant's actual phone number)
-    recipient_phone_number = '+1234567890'  # Example phone number
-
-    # Send the message via WhatsApp using a messaging service API
-    whatsapp_api_url = 'https://api.whatsapp.com/send?phone={}&text={}'.format(recipient_phone_number, message)
-    # Make sure to replace 'your_whatsapp_api_key' with your actual API key
-    response = requests.get(whatsapp_api_url, headers={'Authorization': 'Bearer your_whatsapp_api_key'})
-
-    if response.status_code == 200:
-        # WhatsApp message sent successfully
-        return redirect('invoice_list')
-    else:
-        # Handle the case where the message failed to send
-        return render(request, 'error.html', {'message': 'Failed to send WhatsApp message'})
-    """
     return redirect('invoice_list')
 
 @login_required(login_url='/login/')
@@ -515,10 +618,6 @@ def send_invoices(request):
                 )
                 new_invoice.save()
                 messages.success(request, f'Invoice generated for house H({house.id}) and send to tenant')
-
-                # Logic to send invoices to tenants goes here
-                # You can use the `new_invoice.payment_uuid` to create a payment link
-                # ...
             else:
                 messages.error(request, f'Invalid rent amount for house H({house.id})')
 
