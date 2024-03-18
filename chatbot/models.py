@@ -60,9 +60,15 @@ class Customers(models.Model):
     email = models.EmailField(max_length = 255)
     is_active = models.BooleanField()
     assigned_house = models.ForeignKey(Houses, on_delete=models.SET_NULL, null=True, blank=True)
+    awaiting_response = models.BooleanField(null=False, default=False)
 
     def __str__(self):
         return  f"{self.id} {self.firstname} {self.lastname} {self.assigned_house}"
+    
+class CustomerState(models.Model):
+    phone = models.CharField(max_length=30, unique=True)
+    state = models.CharField(max_length=50)
+    selected_house_id = models.IntegerField(null=True, blank=True)
 
 class Assignment(models.Model):
     tenant = models.ForeignKey(Customers, on_delete=models.CASCADE)

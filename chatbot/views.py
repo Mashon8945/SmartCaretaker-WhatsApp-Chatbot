@@ -9,7 +9,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from reportlab.lib import colors
 from SmartCaretaker import settings
-from .models import Owner, Houses, Customers, WhatsappMessage, Assignment, Transactions, Invoice
+from .models import Owner, Houses, Customers, WhatsappMessage, Assignment, Transactions, Invoice, CustomerState
 from .forms import AssignmentForm
 from django.views.decorators.http import require_POST
 from django.shortcuts import get_object_or_404
@@ -154,156 +154,214 @@ def whatsapp_webhook(request):
     if request.method == 'POST':
         sender = request.POST.get("From", "")
         receiver = request.POST.get("To", "")
-        body = request.POST.get("Body", "").strip().lower()  # Convert to lowercase for case-insensitive comparison
+        body = request.POST.get("Body", "").strip().title()
 
         response = MessagingResponse()
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
         
         # Define the text-based options
-        text_options = "Menu\n1. Rent Payment\n2. Inquire Rent Arrears\n3. Request Statement\n4. Other"
+        text_options = "Menu\n1. Rent Payment\n2. Inquire Rent Arrears\n3. Request Statement\n4. Other(specify)"
 
         # Check if the sender is an existing tenant
-        tenant = Customers.objects.filter(phone=sender).values()
-        if tenant.exists():
-            first_tenant = tenant[0]
-            firstname = first_tenant['firstname']
-            id = first_tenant['id']
+        tenant = Customers.objects.filter(phone=sender).first()
+        if tenant:
+            firstname = tenant.firstname
+            id = tenant.id
 
-            if body == 'hello':
-                message = client.messages.create(
-                    to=sender,
-                    from_=receiver,
-                    body=f"Hello {firstname},\n\nWe hope you're doing well!\nTo better assist you, please select from the following options:\n{text_options}"
-                )
+            if tenant.awaiting_response:
+                # Capture the message and save to the database
+                WhatsappMessage.objects.create(sender=sender, body=body, receiver=receiver)
 
-                print(f"Message sent! Message SID: {message.sid}")
+                # Reset the flag in the database
+                tenant.awaiting_response = False
+                tenant.save()
 
-            elif body.isdigit():
-                option = int(body)
-                if option == 1:
-                    invoice_id = Invoice.objects.get(tenant_id=id).tenant_id
-                    payment_link = generate_payment_link(request, invoice_id)
-                    if payment_link:
-                        response.message(f"Hello {firstname}, here is your one-time payment link: {payment_link}")
-                    else:
-                        response.message("Invoice not found.")
-
-                # Inquire about rent arrears
-                elif option == 2:
-                    arrears_amount = Invoice.objects.filter(tenant_id=id).aggregate(Sum('arrears'))['arrears__sum'] or 0
-                    response.message(f"Hello {firstname}, your current rent arrears amount is: {arrears_amount}")
-
-                # Request statement
-                elif option == 3:
-                    # Logic to generate PDF
-                    buffer = BytesIO()
-                    doc = SimpleDocTemplate(buffer, pagesize=letter)
-                    content = []
-
-                    pdf = canvas.Canvas(buffer)
-
-                    # Add a header
-                    content.append(pdf.drawString(100, 750, "Smart Caretaker"))
-
-                    # Create data for the table
-                    data = [['Transaction ID', 'Amount', 'Date']]
-
-                    transactions = Transactions.objects.filter(tenant_id=id)
-                    
-                    if transactions.exists(): 
-                        pdf.drawString(100, 750, f"Hello {firstname}, here is your statement:")
-                        y_position = 730  # Initial y position for drawing text
-
-                        for transaction in transactions:
-                            data.append([transaction.id, transaction.amount, transaction.date])
-
-                        # Create a table with the data
-                        table = Table(data)
-
-                        # Add style to the table
-                        style = TableStyle([
-                            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                            ('GRID', (0, 0), (-1, -1), 1, colors.black)
-                        ])
-                        table.setStyle(style)
-
-                        # Add the table to the content
-                        content.append(table)
-
-                        # Build the PDF
-                        doc.build(content)
-                        buffer.seek(0)
-
-
-                        # Save PDF to a file
-                        try:
-                            fs = FileSystemStorage(location=r'C:\Users\Leona\Desktop\Smart Caretaker\Chatbot\static\statements')
-                            filename = 'statement.pdf'
-                            pdf_path = fs.save(filename, buffer)
-
-                            pdf_url = fs.url(pdf_path)
-                            print(f"PDF saved at: {pdf_url}")
-
-                            # Send the PDF as a media message
-                            try:
-                                message = client.messages.create(
-                                    to=sender,
-                                    from_=receiver,
-                                    media_url=[request.build_absolute_uri(pdf_url)]
-                                )
-
-                                print(f"Media message sent! Message SID: {message.sid}")
-                            except Exception as e:
-                                print(f"Error sending media message: {e}")
-                                response.message("Error sending media message. Please try again later.")
-                        except Exception as e:
-                            print(f"Error saving PDF: {e}")
-                            response.message("Please try again later.")
-
-                elif option == 4:
-                    # Prompt the user to specify their inquiry
-                    response.message(f"Hello {firstname}, please type and specify your inquiry.")
-
-                    next_message_body = listen_for_next_message(sender)  # This function should capture the next message from the user
-
-                    if next_message_body:
-                        WhatsappMessage.objects.create(sender=sender, body=next_message_body, receiver=receiver)
-                        response.message(f"Thank you {firstname}, we have received your message. Our team will get back to you shortly.")
-                    else:
-                        response.message("No message received. Please try again later.")
-                else:
-                    response.message(f"Hello {firstname}, please select a valid option or send 'menu' to see options again.")
-
-            # Provide main menu
-            elif body == 'menu':
-                response.message(f"Hello {firstname},\n\nPlease select from the following options:\n{text_options}")
+                # Send confirmation to the user
+                response.message(f"Thank you {firstname}, we have received your message. Our team will get back to you shortly.")
             else:
-                response.message("We couldn't find your information in our records. Please contact support for assistance.")
+                if body in ['Hello', 'Hi', 'Hey', 'Sasa', 'Mambo']:
+                    message = client.messages.create(
+                        to=sender,
+                        from_=receiver,
+                        body=f"Hello {firstname},\n\nWe hope you're doing well!\nTo better assist you, please select from the following options:\n{text_options}"
+                    )
+                    print(f"Message sent! Message SID: {message.sid}")
 
-            return HttpResponse(str(response), content_type='application/xml', status=200)
+                elif body.isdigit():
+                    option = int(body)
+                    if option == 1:
+                        invoice_id = Invoice.objects.filter(tenant_id=id).first().id
+                        payment_link = generate_payment_link(request, invoice_id)
+                        if payment_link:
+                            response.message(f"Hello {firstname}, here is your one-time payment link: {payment_link}")
+                        else:
+                            response.message("Invoice not found.")
+
+                    # Inquire about rent arrears
+                    elif option == 2:
+                        arrears_amount = Invoice.objects.filter(tenant_id=id).aggregate(Sum('amount_due'))['arrears__sum'] or 0
+                        response.message(f"Hello {firstname}, your current rent arrears amount is: {arrears_amount}")
+
+                    # Request statement
+                    elif option == 3:
+                        # Logic to generate PDF
+                        buffer = BytesIO()
+                        doc = SimpleDocTemplate(buffer, pagesize=letter)
+                        content = []
+
+                        pdf = canvas.Canvas(buffer)
+
+                        # Add a header
+                        content.append(pdf.drawString(100, 750, "Smart Caretaker"))
+
+                        # Create data for the table
+                        data = [['Transaction ID', 'Amount', 'Date']]
+
+                        transactions = Transactions.objects.filter(tenant_id=id)
+                        
+                        if transactions.exists(): 
+                            pdf.drawString(100, 750, f"Hello {firstname}, here is your statement:")
+                            y_position = 730  # Initial y position for drawing text
+
+                            for transaction in transactions:
+                                data.append([transaction.id, transaction.amount, transaction.date])
+
+                            # Create a table with the data
+                            table = Table(data)
+
+                            # Add style to the table
+                            style = TableStyle([
+                                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+                                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                                ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                            ])
+                            table.setStyle(style)
+
+                            # Add the table to the content
+                            content.append(table)
+
+                            # Build the PDF
+                            doc.build(content)
+                            buffer.seek(0)
+
+                            # Save PDF to a file
+                            try:
+                                fs = FileSystemStorage(location=r'C:\Users\Leona\Desktop\Smart Caretaker\Chatbot\static\statements')
+                                filename = 'statement.pdf'
+                                pdf_path = fs.save(filename, buffer)
+
+                                pdf_url = fs.url(pdf_path)
+                                print(f"PDF saved at: {pdf_url}")
+
+                                # Send the PDF as a media message
+                                try:
+                                    message = client.messages.create(
+                                        to=sender,
+                                        from_=receiver,
+                                        media_url=[request.build_absolute_uri(pdf_url)]
+                                    )
+
+                                    print(f"Media message sent! Message SID: {message.sid}")
+                                except Exception as e:
+                                    print(f"Error sending media message: {e}")
+                                    response.message("Error sending media message. Please try again later.")
+                            except Exception as e:
+                                print(f"Error saving PDF: {e}")
+                                response.message("Please try again later.")
+
+                    elif option == 4:
+                        # Set a flag in the database to indicate that the next message should be captured
+                        tenant.awaiting_response = True
+                        tenant.save()
+
+                        # Prompt the user to specify their inquiry
+                        response.message(f"Hello {firstname}, please type and specify your inquiry.")
+                    else:
+                        response.message(f"Hello {firstname}, please select a valid option or send 'menu' to see options again.")
+
+                # Provide main menu
+                else:
+                    response.message(f"Hello {firstname},\n\nPlease select from the following options:\n{text_options}")
         else:
-            return HttpResponse("Invalid request", content_type='application/xml', status=400)
+            # Get or create a state object for the user
+            state, created = CustomerState.objects.get_or_create(phone=sender)
+            
+            if state.state == '':
+                # If the state is empty, this is the first interaction
+                response.message("We couldn't find your information in our records. " 
+                                "Are you looking for a house? \n\nPlease reply with 'Yes' to view available houses or 'No' to end this conversation.")
+                state.state = 'awaiting_house_interest'
+                state.save()
 
+            elif state.state == 'awaiting_house_interest':
+                if body == 'Yes':
+                    # The user is interested in a house, show available houses
+                    vacant_houses = Houses.objects.filter(vacancy='VACANT')
+                    if vacant_houses.exists():
+                        house_list = "Please select a house by number:\n"
+                        for index, house in enumerate(vacant_houses, start=1):
+                            house_list += f"{index}. H({house.id}) {house.house_type} \tKsh {house.House_rent}\n"
+                        response.message(house_list)
+                        state.state = 'awaiting_house_selection'
+                        state.save()
+                    else:
+                        response.message("Currently, there are no vacant houses available.")
+                        state.state = ''
+                        state.save()
+                elif body == 'No':
+                    response.message("Thank you for your response. Have a great day!")
+                    state.delete()  # Clean up the state if the user is not interested
+                else:
+                    response.message("I didn't understand that. Are you looking for a house? Please reply with 'Yes' or 'No'.")
 
-def listen_for_next_message(sender):
-    # Initialize Twilio client
-    client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+            elif state.state == 'awaiting_house_selection':
+                try:
+                    selected_index = int(body) - 1
+                    vacant_houses = Houses.objects.filter(vacancy='VACANT')
+                    selected_house = vacant_houses[selected_index]
+                    state.selected_house_id = selected_house.id
+                    state.state = 'awaiting_user_registration'
+                    state.save()
+                    response.message("You have selected a house. Please provide your Firstname, Lastname and email address: \n\n In the form Firstname, Lastname, Email.")
+                except (ValueError, IndexError):
+                    response.message("Invalid selection. Please select a house by number from the list.")
 
-    # Fetch recent messages from Twilio
-    messages = client.messages.list(to=sender, limit=1)  # Limit to 1 message for simplicity
+            elif state.state == 'awaiting_user_registration':
+                # Here you'd collect the user's information in stages, updating state after each step
+                # For brevity, let's assume the user is providing all information at once in a comma-separated format: "Firstname, Lastname, Email"
+                try:
+                    firstname, lastname, email = body.split(',')
+                    tenant = Customers.objects.create(
+                        phone=sender,
+                        firstname=firstname.strip(),
+                        lastname=lastname.strip(),
+                        email=email.strip(),
+                        is_active = 1,
+                        assigned_house_id = state.selected_house_id
+                    )
 
-    # Check if there are any incoming messages
-    if messages:
-        message_body = messages[0].body  # Get the body of the first message
-        return message_body
+                    assigned = Assignment.objects.create(
+                        
+                    )
+                    selected_house = Houses.objects.get(id=state.selected_house_id)
+                    selected_house.vacancy = 'OCCUPIED'  # or any logic you use to 'book' a house
+                    selected_house.save()
+                    response.message(f"Thank you {firstname.strip()}, you have been registered and your house has been booked.")
+                    state.delete()  # Clean up the state after registration
+                except ValueError:
+                    response.message("Please provide your information in the format: Firstname, Lastname, Email")
+                except Houses.DoesNotExist:
+                    response.message("The house you selected is no longer available. Please start over.")
+                    state.state = 'awaiting_house_interest'
+                    state.save()
+
+        return HttpResponse(str(response), content_type='application/xml', status=200)
     else:
-        return None
-
+        return HttpResponse("Method Not Allowed", status=405)
 
 
 @login_required(login_url='/login/')
@@ -409,7 +467,6 @@ def delete_house(request, house_id):
     messages.success(request, 'House deleted successfully!')
     return redirect('homes')
 
-
 @require_POST
 @login_required(login_url='/login/')
 def update_homes(request):
@@ -500,7 +557,6 @@ def add_customer(request):
     else:
         return HttpResponseBadRequest('Invalid request')
 
-
 @require_POST
 @login_required(login_url='/login/')
 def update_Customer(request):
@@ -530,7 +586,7 @@ def update_Customer(request):
 
     else:
         return HttpResponseBadRequest('Invalid request!')
-    
+
 @login_required(login_url='/login/')
 def get_tenant_details(request, customer_id):
     customer = get_object_or_404(Customers, pk=customer_id)
@@ -564,7 +620,6 @@ def transactions(request):
     index_offset = (int(page_number) - 1) * items_per_page
 
     return render(request, 'transactions.html', {'transaction':transaction, 'index_offset': index_offset})
-
 
 def generate_payment_link(request, invoice_id):
     try:
@@ -639,7 +694,6 @@ def invoice_list(request):
     index_offset = (int(page_number) - 1) * items_per_page
 
     return render(request, 'invoice_list.html', {'invoices': invoices, 'index_offset': index_offset})
-
 
 def payment_form(request, payment_uuid):
     context = {'errors': []}
