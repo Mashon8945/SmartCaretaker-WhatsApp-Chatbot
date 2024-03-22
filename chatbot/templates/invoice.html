@@ -17,7 +17,7 @@
                     <div class="card-body">
                         <h2>Invoice #{{ invoice.id }}</h2>
                         <h4>Tenant: {{ invoice.tenant.firstname }} {{ invoice.tenant.lastname }}</h4>
-                        <h5>House: H({{ invoice.tenant.id }})</h5>
+                        <h5>House: H({{ invoice.house_id }})</h5>
                         <p>Date Issued: {{ invoice.date_issued }}</p>
                         <p>Date Due: {{ invoice.date_due }}</p>
                         <p>Rent: {{ invoice.amount_due }}</p>

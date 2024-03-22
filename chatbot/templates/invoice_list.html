@@ -59,7 +59,7 @@
             
                                     <td>{{ invoice.tenant.firstname }} {{ invoice.tenant.lastname }}</td>
             
-                                    <td>H({{ invoice.tenant.id }})</td>
+                                    <td>H({{ invoice.house_id }})</td>
                                     
                                     <td>{{ invoice.date_due }}</td>
             
@@ -69,7 +69,7 @@
                                         {% if invoice.is_paid %} 
                                             <span class="badge text-bg-success"> Paid</span>
                                         {% else %} 
-                                            <span class="badge text-bg-danger"> Unpaid</span>
+                                            <span class="badge text-bg-danger"> Pending</span>
                                         {% endif %}
                                     </td>
                                     <td scope="row">

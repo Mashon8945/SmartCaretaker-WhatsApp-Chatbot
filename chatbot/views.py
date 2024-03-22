@@ -1,14 +1,10 @@
 from decimal import Decimal
-from django.http import HttpResponseBadRequest, JsonResponse,  Http404, HttpResponseRedirect
+from django.http import HttpResponseBadRequest, JsonResponse, HttpResponseRedirect
 from django.shortcuts import render, HttpResponse, redirect
 from django.contrib.auth import login, authenticate
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.decorators import login_required
 from twilio.rest import Client
-from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
-from reportlab.lib import colors
-from SmartCaretaker import settings
 from .models import Owner, Houses, Customers, WhatsappMessage, Assignment, Transactions, Invoice, CustomerState
 from .forms import AssignmentForm
 from django.views.decorators.http import require_POST
@@ -24,15 +20,10 @@ from twilio.twiml.messaging_response import MessagingResponse
 from django.core.paginator import Paginator
 from django.utils import timezone
 import uuid
-import json
-import requests
-import os
 from django.db.models import Sum
 from django.urls import reverse
 from django.core.exceptions import ValidationError
-from django.core.files.storage import FileSystemStorage
-from reportlab.pdfgen import canvas
-from io import BytesIO
+
 
 # Create your views here.
 def landing(request):
@@ -95,24 +86,44 @@ def header(request):
     return render(request, 'header.html', context)
 
 def notice(request):
-    return render(request, 'notice.html')
+    messages = WhatsappMessage.objects.all().order_by('-timestamp')
+    customers = Customers.objects.all()
+
+    phone_to_name = {customer.phone: (customer.firstname, customer.lastname) for customer in customers}
+    messages_with_names = [
+        {
+            'firstname': phone_to_name[message.sender][0],
+            'lastname': phone_to_name[message.sender][1],
+            'content': message.body,
+            'timestamp': message.timestamp
+        }
+        for message in messages if message.sender in phone_to_name
+    ]
+    context = {
+        'messages': messages_with_names,
+        'customers':customers,
+    }
+    return render(request, 'notice.html', context)
 
 @login_required(login_url='/login/')
+@csrf_exempt
 def dashboard(request):
-    if request.method == 'POST':
+    if request.is_ajax():
         message_id = request.POST.get('message_id')
-        reply = request.POST.get('reply')
+        reply_text = request.POST.get('reply_text')
 
         message_to_reply = WhatsappMessage.objects.get(id = message_id)
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
         from_whatsapp_number = 'whatsapp:+14155238886'
         to_whatsapp_number = message_to_reply.sender
 
-        client.messages.create(body = reply, from_ = from_whatsapp_number, to = to_whatsapp_number)
+        client.messages.create(body = reply_text, from_ = from_whatsapp_number, to = to_whatsapp_number)
         message_to_reply.replied = True
         message_to_reply.save()
 
-        return redirect('dashboard')
+        # After saving the reply or sending the message, return a JsonResponse
+        return JsonResponse({'reply_text': reply_text}, status=200)
+        
 
     current_time = timezone.now()
     two_days_ago = current_time - timedelta(days=2)
@@ -133,6 +144,7 @@ def dashboard(request):
             'firstname': phone_to_name[message.sender][0],
             'lastname': phone_to_name[message.sender][1],
             'content': message.body,
+            'id': message.id,
             'timestamp': message.timestamp
         }
         for message in recent_messages if message.sender in phone_to_name
@@ -186,7 +198,6 @@ def whatsapp_webhook(request):
                         body=f"Hello {firstname},\n\nWe hope you're doing well!\nTo better assist you, please select from the following options:\n{text_options}"
                     )
                     print(f"Message sent! Message SID: {message.sid}")
-
                 elif body.isdigit():
                     option = int(body)
                     if option == 1:
@@ -199,80 +210,36 @@ def whatsapp_webhook(request):
 
                     # Inquire about rent arrears
                     elif option == 2:
-                        arrears_amount = Invoice.objects.filter(tenant_id=id).aggregate(Sum('amount_due'))['arrears__sum'] or 0
-                        response.message(f"Hello {firstname}, your current rent arrears amount is: {arrears_amount}")
+                        arrears_amount = Invoice.objects.filter(tenant_id=id).aggregate(Sum('amount_due'))['amount_due__sum'] or 0
+                        response.message(f"Hello {firstname}, your current rent arrears amount is: Ksh {arrears_amount}")
 
                     # Request statement
                     elif option == 3:
-                        # Logic to generate PDF
-                        buffer = BytesIO()
-                        doc = SimpleDocTemplate(buffer, pagesize=letter)
-                        content = []
-
-                        pdf = canvas.Canvas(buffer)
-
-                        # Add a header
-                        content.append(pdf.drawString(100, 750, "Smart Caretaker"))
-
-                        # Create data for the table
-                        data = [['Transaction ID', 'Amount', 'Date']]
-
+                        # Fetch transactions for the tenant
                         transactions = Transactions.objects.filter(tenant_id=id)
                         
-                        if transactions.exists(): 
-                            pdf.drawString(100, 750, f"Hello {firstname}, here is your statement:")
-                            y_position = 730  # Initial y position for drawing text
+                        if transactions.exists():
+                            # Initialize a message string with a header
+                            message_body = f"Hello {firstname}, here is your statement:\n\n"
+                            message_body += "No. \tTx ID \tAmount  \tDate \n\n"  # Column headers
 
-                            for transaction in transactions:
-                                data.append([transaction.id, transaction.amount, transaction.date])
+                            # Iterate through transactions and append each to the message string
+                            for counter, transaction in enumerate(transactions, start=1):
+                                message_body += f"{counter}. \t{transaction.id} \t{transaction.amount} \t{transaction.date.strftime('%Y-%m-%d')}\n"
 
-                            # Create a table with the data
-                            table = Table(data)
-
-                            # Add style to the table
-                            style = TableStyle([
-                                ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
-                                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
-                                ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
-                                ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
-                                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
-                                ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
-                                ('GRID', (0, 0), (-1, -1), 1, colors.black)
-                            ])
-                            table.setStyle(style)
-
-                            # Add the table to the content
-                            content.append(table)
-
-                            # Build the PDF
-                            doc.build(content)
-                            buffer.seek(0)
-
-                            # Save PDF to a file
+                            # Send the message with the transactions formatted as text
                             try:
-                                fs = FileSystemStorage(location=r'C:\Users\Leona\Desktop\Smart Caretaker\Chatbot\static\statements')
-                                filename = 'statement.pdf'
-                                pdf_path = fs.save(filename, buffer)
-
-                                pdf_url = fs.url(pdf_path)
-                                print(f"PDF saved at: {pdf_url}")
-
-                                # Send the PDF as a media message
-                                try:
-                                    message = client.messages.create(
-                                        to=sender,
-                                        from_=receiver,
-                                        media_url=[request.build_absolute_uri(pdf_url)]
-                                    )
-
-                                    print(f"Media message sent! Message SID: {message.sid}")
-                                except Exception as e:
-                                    print(f"Error sending media message: {e}")
-                                    response.message("Error sending media message. Please try again later.")
+                                message = client.messages.create(
+                                    to=sender,
+                                    from_=receiver,
+                                    body=message_body
+                                )
+                                print(f"Message sent! Message SID: {message.sid}")
                             except Exception as e:
-                                print(f"Error saving PDF: {e}")
-                                response.message("Please try again later.")
-
+                                print(f"Error sending message: {e}")
+                                response.message("Error sending message. Please try again later.")
+                        else:
+                            response.message("No transactions found.")
                     elif option == 4:
                         # Set a flag in the database to indicate that the next message should be captured
                         tenant.awaiting_response = True
@@ -282,8 +249,6 @@ def whatsapp_webhook(request):
                         response.message(f"Hello {firstname}, please type and specify your inquiry.")
                     else:
                         response.message(f"Hello {firstname}, please select a valid option or send 'menu' to see options again.")
-
-                # Provide main menu
                 else:
                     response.message(f"Hello {firstname},\n\nPlease select from the following options:\n{text_options}")
         else:
@@ -291,20 +256,27 @@ def whatsapp_webhook(request):
             state, created = CustomerState.objects.get_or_create(phone=sender)
             
             if state.state == '':
-                # If the state is empty, this is the first interaction
-                response.message("We couldn't find your information in our records. " 
-                                "Are you looking for a house? \n\nPlease reply with 'Yes' to view available houses or 'No' to end this conversation.")
-                state.state = 'awaiting_house_interest'
-                state.save()
+                if body.lower() == 'quit':
+                    response.message("You have ended the conversation. Have a great day! ")
+                    state.delete()
+                else:
+                    # If the state is empty, this is the first interaction
+                    response.message("We couldn't find your information in our records. " 
+                                    "Are you looking for a house? \n\nPlease reply with 'Yes' to view available houses or 'No' to end this conversation.")
+                    state.state = 'awaiting_house_interest'
+                    state.save()
 
             elif state.state == 'awaiting_house_interest':
-                if body == 'Yes':
+                if body.lower() == 'quit':
+                    response.message("You have ended the conversation. Have a great day!")
+                    state.delete()
+                elif body == 'Yes':
                     # The user is interested in a house, show available houses
                     vacant_houses = Houses.objects.filter(vacancy='VACANT')
                     if vacant_houses.exists():
-                        house_list = "Please select a house by number:\n"
+                        house_list = "Please select a house by number:\n\n No.\t Name\t Type\t\t Rent\n"
                         for index, house in enumerate(vacant_houses, start=1):
-                            house_list += f"{index}. H({house.id}) {house.house_type} \tKsh {house.House_rent}\n"
+                            house_list += f"{index}. \tH({house.id}) \t{house.house_type} \tKsh {house.House_rent}\n"
                         response.message(house_list)
                         state.state = 'awaiting_house_selection'
                         state.save()
@@ -316,49 +288,82 @@ def whatsapp_webhook(request):
                     response.message("Thank you for your response. Have a great day!")
                     state.delete()  # Clean up the state if the user is not interested
                 else:
-                    response.message("I didn't understand that. Are you looking for a house? Please reply with 'Yes' or 'No'.")
+                    response.message("I didn't understand that. Are you looking for a house? Please reply with 'Yes' or 'No' or 'Quit'.")
 
             elif state.state == 'awaiting_house_selection':
-                try:
-                    selected_index = int(body) - 1
-                    vacant_houses = Houses.objects.filter(vacancy='VACANT')
-                    selected_house = vacant_houses[selected_index]
-                    state.selected_house_id = selected_house.id
-                    state.state = 'awaiting_user_registration'
-                    state.save()
-                    response.message("You have selected a house. Please provide your Firstname, Lastname and email address: \n\n In the form Firstname, Lastname, Email.")
-                except (ValueError, IndexError):
-                    response.message("Invalid selection. Please select a house by number from the list.")
+                if body.lower() == 'quit':
+                    response.message("You have ended the conversation. Have a great day!")
+                    state.delete()
+                else:
+                    try:
+                        selected_index = int(body) - 1
+                        vacant_houses = Houses.objects.filter(vacancy='VACANT')
+                        selected_house = vacant_houses[selected_index]
+                        state.selected_house_id = selected_house.id
+                        state.state = 'awaiting_user_registration'
+                        state.save()
+                        response.message(f"You have selected house H({selected_house.id}). Please provide your Firstname, Lastname and email address: \n\n In the form Firstname, Lastname, Email. or 'Quit' ")
+                    except (ValueError, IndexError):
+                        response.message("Invalid selection. Please select a house by number from the list.")
 
             elif state.state == 'awaiting_user_registration':
-                # Here you'd collect the user's information in stages, updating state after each step
-                # For brevity, let's assume the user is providing all information at once in a comma-separated format: "Firstname, Lastname, Email"
-                try:
-                    firstname, lastname, email = body.split(',')
-                    tenant = Customers.objects.create(
-                        phone=sender,
-                        firstname=firstname.strip(),
-                        lastname=lastname.strip(),
-                        email=email.strip(),
-                        is_active = 1,
-                        assigned_house_id = state.selected_house_id
-                    )
-
-                    assigned = Assignment.objects.create(
+                if body.lower() == 'quit':
+                    response.message("You have ended the conversation. Have a great day!")
+                    state.delete()
+                else:
+                    # Here you'd collect the user's information in stages, updating state after each step
+                    # For brevity, let's assume the user is providing all information at once in a comma-separated format: "Firstname, Lastname, Email"
+                    try:
+                        # Splitting the input into first name, last name, and email
+                        firstname, lastname, email = [part.strip() for part in body.split(',')]
                         
-                    )
-                    selected_house = Houses.objects.get(id=state.selected_house_id)
-                    selected_house.vacancy = 'OCCUPIED'  # or any logic you use to 'book' a house
-                    selected_house.save()
-                    response.message(f"Thank you {firstname.strip()}, you have been registered and your house has been booked.")
-                    state.delete()  # Clean up the state after registration
-                except ValueError:
-                    response.message("Please provide your information in the format: Firstname, Lastname, Email")
-                except Houses.DoesNotExist:
-                    response.message("The house you selected is no longer available. Please start over.")
-                    state.state = 'awaiting_house_interest'
-                    state.save()
+                        # Validate the presence of first name, last name, and email
+                        if not firstname or not lastname or not email:
+                            raise ValueError("Provide your information in the format: Firstname, Lastname, Email.")
 
+                        # Email specific validation
+                        if '@gmail.com' not in email.lower():
+                            raise ValueError("Please provide a valid email address with '@gmail.com'.")
+                        
+                        # Check if email is already taken
+                        if Customers.objects.filter(email=email).exists():
+                            raise ValueError("The email address you provided is already taken by another user.")
+                        
+                        tenant = Customers.objects.create(
+                            phone=sender,
+                            firstname=firstname.strip(),
+                            lastname=lastname.strip(),
+                            email=email.strip(),
+                            is_active = 1,
+                            assigned_house_id = state.selected_house_id
+                        )
+                        
+                        selected_house = Houses.objects.get(id=state.selected_house_id)
+
+                        # Check if the selected house is still vacant
+                        if selected_house.vacancy.lower() == 'vacant':
+                            # Create the Assignment object
+                            assignment = Assignment(tenant=tenant, house=selected_house)
+
+                            selected_house.vacancy = 'OCCUPIED'  # logic to 'book' a house
+                            selected_house.save()
+                            
+                            # Save the Assignment object, which updates the House vacancy status
+                            assignment.save()
+                            generate_invoices(request)
+                            
+                            response.message(f"Thank you {firstname.strip()}, you have been registered and your house has been booked.")
+                            state.delete()  # Clean up the state after registration
+                        else:
+                            response.message("The house you selected is no longer available. Please start over.")
+                            state.state = 'awaiting_house_interest'
+                            state.save()
+                    except ValueError as e:
+                        response.message(str(e) + "\n")
+                    except Houses.DoesNotExist:
+                        response.message("The house you selected is no longer available. Please start over.")
+                        state.state = 'awaiting_house_interest'
+                        state.save()
         return HttpResponse(str(response), content_type='application/xml', status=200)
     else:
         return HttpResponse("Method Not Allowed", status=405)
@@ -511,8 +516,7 @@ def get_house_details(request, house_id):
         'house_type': house.house_type,
         'status': house.vacancy
     }     
-    return JsonResponse(data)
-    
+    return JsonResponse(data)    
 
 @login_required(login_url='/login/')
 def tenants(request):
@@ -548,7 +552,7 @@ def add_customer(request):
                 firstname = firstname,
                 lastname = lastname,
                 email = email,
-                phone = 'whatsapp:' +phone,
+                phone = 'whatsapp:' +'+254'+phone,
                 is_active = active
             )
             return JsonResponse({'status': 'success', 'message': 'Tenant added successfully!'})
@@ -630,15 +634,13 @@ def generate_payment_link(request, invoice_id):
         invoice.save()
 
         payment_link = request.build_absolute_uri(reverse('payment_form', kwargs={'payment_uuid': payment_uuid}))
-        print(payment_link)
         messages.success(request, 'Link has been sent successfully')
         return payment_link
     except Invoice.DoesNotExist:
         messages.error(request, 'Invoice does not exist')
     return redirect('invoice_list')
 
-@login_required(login_url='/login/')
-def send_invoices(request):
+def generate_invoices(request):
     occupied_houses = Houses.objects.exclude(vacancy='VACANT')
     current_date = timezone.now().date()
     

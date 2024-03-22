@@ -18,26 +18,44 @@
                     </div>
                     <div class="card-body" style="overflow: visible;">
                         <div class="table-responsive slimScrollDiv" style="height: 300px;">
-                            <table class="table table-hover table-bordered earning-box ">
+                            <table class="table table-hover table-bordered earning-box">
                                 <thead>
                                     <tr>
                                         <th scope="col">No.</th>
                                         <th scope="col">Sender</th>
                                         <th scope="col">Message</th>
                                         <th scope="col">Time</th>
-                                        <th scope="col">Action </th>
+                                        <th scope="col">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                {% for message in messages %}
+                                    {% for message in messages %}
                                     <tr>
                                         <td scope="row">{{ forloop.counter }}</td>
-                                        <td scope="row">{{ message.name }}</td>
-                                        <td scope="row">{{ message.content }}</a></td>
+                                        <td scope="row">{{ message.firstname }} {{ message.lastname }}</td>
+                                        <td scope="row">
+                                            {% if message.content|length > 50 %}
+                                            {{ message.content|slice:":50" }}...
+                                            <a href="#" data-toggle="modal" data-target="#messageModal{{ message.id }}">Read More</a>
+                                            {% else %}
+                                            {{ message.content }}
+                                            {% endif %}
+                                        </td>
                                         <td scope="row">{{ message.timestamp }}</td>
-                                        <td class="action-column"></td>
+                                        <td class="action-row">
+                                            <div class="dropdown">
+                                                <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink{{ message.lastname }}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                    <span class="text-muted">&#8942;</span> <!-- The three vertical dots -->
+                                                </a>
+                                                <div class="dropdown-menu" aria-labelledby="dropdownMenuLink{{ message.id }}">
+                                                    <a class="dropdown-item" href="#" data-toggle="modal" data-target="#replyModal{{ message.id }}">Reply</a>
+                                                    <a class="dropdown-item" href="#" data-toggle="modal" data-target="#deleteModal{{ message.id }}">Delete</a>
+                                                    <a class="dropdown-item" href="#">Other</a>
+                                                </div>
+                                            </div>
+                                        </td>
                                     </tr>
-                                {% endfor %}
+                                    {% endfor %}
                                 </tbody>
                             </table>
                         </div>

@@ -1,177 +1,23 @@
 {% extends "header.html" %} 
 {% load static %}
 <style>
-    .card-body {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
+    /* Chat bubble styles */
+    .chat-message {
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 10px;
+        max-width: 70%;
     }
-    .table-widget {
-        border-radius: 1rem;
-        background: var(--table-background);
-        padding: 1.5rem;
-        border: 2px solid var(--gray-background);
-        box-shadow: 
-            rgba(0, 0, 0, 0.05) 0px 6px 24px 0px,
-            rgba(0, 0, 0, 0.08) 0px 0px 0px 1px;
-        text-align: left;
-        overflow-x: auto;
+
+    .chat-message-left {
+        background-color: #f0f0f0; /* User message background color */
+        float: left;
     }
-    
-    .table-widget table {
-        border-collapse: collapse;
-        min-height: 30rem;
-        max-width: 60rem;
-        width: 100%;
-    }
-    
-    .table-widget caption {
-        font-size: 1.12rem;
-        font-weight: 700;
-        text-align: left;
-        margin: 0.5rem 0;
-    }
-    
-    .table-widget th {
-        padding: 1.25rem 1rem;
-        font-size: 0.875rem;
-        color: var(--gray);
-    }
-    
-    .table-widget thead {
-        border-top: 2px solid var(--gray-background);
-    }
-    
-    .table-widget tfoot {
-        margin-top: 1rem;
-        border-top: 2px solid var(--gray-background);
-    }
-    
-    .table-widget td {
-        padding: 0.5rem 1rem;
-    }
-    
-    .table-widget tbody tr {
-        cursor: pointer;
-        animation: fadeIn 0.5s ease-in-out;
-    }
-    
-    .table-widget tbody tr:nth-child(odd) {
-        background-color: var(--odd-row);
-    }
-    
-    .table-widget tbody tr:hover {
-        background-color: #e2ecff;
-    }
-    
-    .table-row-count {
-        font-size: 0.8rem;
-        font-weight: 700;
-        background-color: var(--odd-row);
-        padding: 0.5rem;
-        display: inline-flex;
-        align-items: center;
-        margin-left: 1rem;
-        border-radius: 0.5rem;
-    }
-    
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-        }
-        to {
-            opacity: 1;
-        }
-    }
-    
-    .team-member-profile {
-        display: flex;
-        gap: 1rem;
-        align-items: center;
-    }
-    
-    .profile-info {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-    
-    .profile-info__name {
-        font-weight: 700;
-        white-space: nowrap;
-    }
-    
-    .team-member-profile img {
-        width: 3rem;
-        height: 3rem;
-        border-radius: 50%;
-        object-fit: cover;
-    }
-    
-    .status {
-        border-radius: 0.5rem;
-        padding: 0.5rem;
-        font-weight: 700;
-    }
-    
-    .status--completed {
-        background-color: #EAFEF3;
-        color: #2ECC71;
-        border: 1px solid #2ECC71;
-    }
-    
-    .status--pending {
-        background-color: #fff6e5;
-        color: #F4BD50;
-        border: 1px solid #F4BD50;
-    }
-    
-    .status--error {
-        color: #DF8FA8;
-        background-color: #fef1f5;
-        border: 1px solid #DF8FA8;
-    }
-    
-    .tags {
-        display: flex;
-        gap: 0.5rem;
-    }
-    
-    .tag {
-        padding: 0.5rem;
-        background-color: var(--gray-mid);
-        border-radius: 0.5rem;
-        font-weight: 700;
-    }
-    
-    .tag::first-letter {
-        text-transform: uppercase;
-    }
-    
-    .table-widget {
-        min-height: 5rem;
-    }
-    
-    .pagination {
-        list-style-type: none;
-        display: flex;
-        gap: 1rem;
-        padding: 0;
-    }
-    
-    .pagination a {
-        display: block;
-        color: var(--primary);
-        font-size: 1.3rem;
-        text-decoration: none;
-        font-weight: 700;
-        padding: 0.75rem 1rem;
-        border-radius: 0.5rem;
-    }
-    
-    .pagination a:hover, a.active{
-        background-color: var(--odd-row);
-        text-decoration: underline;
+
+    .chat-message-right {
+        background-color: #007bff; /* Your reply background color */
+        color: #fff; /* Your reply text color */
+        float: right;
     }
 </style>
 
@@ -231,6 +77,33 @@
                 </div>
             </div>
         </div>
+        {% for message in messages %}
+        <div class="modal fade" id="messageModal{{ message.id }}" tabindex="-1" role="dialog" aria-labelledby="messageModalLabel{{ message.id }}" aria-hidden="true">
+            <div class="modal-dialog" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="messageModalLabel{{ message.id }}">Sender: {{ message.firstname }} {{ message.lastname }}</h5>
+                        <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body chat-modal-body">
+                        <!-- User message bubble -->
+                        <div class="chat-message chat-message-left">
+                            {{ message.content }}
+                        </div>
+                        <!-- Placeholder for replies -->
+                        <div id="replyContainer{{ message.id }}" class="reply-container"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <input type="hidden" id="csrfToken" value="{{ csrf_token }}">
+                        <textarea id="replyText{{ message.id }}" class="form-control" placeholder="Type your reply here..."></textarea>
+                        <button type="button" class="btn btn-primary" onclick="sendReply({{ message.id }})">Send Reply</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
         <div class="container-fluid">
             <!-- Row -->
             <div class="row"> 
@@ -243,14 +116,14 @@
                         </div>
                         <div class="card-body" style="overflow: visible;">
                             <div class="table-responsive slimScrollDiv" style="height: 300px;">
-                                <table class="table table-hover table-bordered earning-box ">
+                                <table class="table table-hover table-bordered earning-box">
                                     <thead>
                                         <tr>
                                             <th scope="col">No.</th>
                                             <th scope="col">Sender</th>
                                             <th scope="col">Message</th>
                                             <th scope="col">Time</th>
-                                            <th scope="col">Action </th>
+                                            <th scope="col">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -258,12 +131,31 @@
                                         <tr>
                                             <td scope="row">{{ forloop.counter }}</td>
                                             <td scope="row">{{ message.firstname }} {{ message.lastname }}</td>
-                                            <td scope="row">{{ message.content }}</a></td>
+                                            <td scope="row">
+                                                {% if message.content|length > 50 %}
+                                                    {{ message.content|slice:":50" }}...
+                                                    <a href="#" data-bs-toggle="modal" data-bs-target="#messageModal{{ message.id }}">Read More</a>
+                                                {% else %}
+                                                    {{ message.content }}
+                                                {% endif %}
+                                            </td>
                                             <td scope="row">{{ message.timestamp }}</td>
-                                            <td class="action-row"><a href="" class="icon icon-md"></td>
+                                            <td class="action-row">
+                                                <div class="dropdown">
+                                                    <a  href="#" role="button" id="dropdownMenuLink{{ message.id }}" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                        <span class="text-muted">&#8942;</span> <!-- The three vertical dots -->
+                                                    </a>
+                                                    <div class="dropdown-menu" aria-labelledby="dropdownMenuLink{{ message.id }}">
+                                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#messageModal{{ message.id }}">Reply</a>
+                                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal{{ message.id }}">Delete</a>
+                                                        <a class="dropdown-item" href="#">Other</a>
+                                                    </div>
+                                                </div>
+                                            </td>
                                         </tr>
                                         {% endfor %}
                                     </tbody>
+                                </table>
                                 </table>
                             </div>
                         </div>
@@ -426,4 +318,33 @@
             </div>
         </div>
     </div>
+    <script>
+        function sendReply(messageId) {
+            var replyText = document.getElementById('replyText' + messageId).value;
+            var csrfToken = document.getElementById('csrfToken').value; // Get the CSRF token
+            if (replyText.trim() === "") {
+                alert("Please type a reply.");
+                return;
+            }
+            $.ajax({
+                url: '/dashboard/',
+                type: 'POST',
+                data: {
+                    'csrfmiddlewaretoken': csrfToken, // Include the CSRF token in the data
+                    'message_id': messageId,
+                    'reply_text': replyText,
+                },
+                success: function(response) {
+                    // Create the reply bubble
+                    var newReply = '<div class="chat-message chat-message-right">' + response.reply_text + '</div>';
+                    document.getElementById('replyContainer' + messageId).innerHTML += newReply;
+                    document.getElementById('replyText' + messageId).value = ''; // Clear the input field
+                },
+                error: function(error) {
+                    console.error("Error sending reply:", error);
+                    alert("Error sending reply. Please try again.");
+                }
+            });
+        }
+        </script>
 {% endblock content %}
