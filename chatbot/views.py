@@ -409,13 +409,7 @@ def homes(request):
         else:
             return JsonResponse({'status': 'error', 'message': form.errors}, status=400)
 
-    context = {
-        'tenants': tenants,
-        'form': form,  
-        'assignments': assignments,
-        'page_house': page_house,
-        'index_offset': index_offset,
-    }
+    context = {'tenants': tenants,'form': form, 'assignments': assignments, 'page_house': page_house,'index_offset': index_offset,}
     return render(request, 'homes.html', context)
 
 @login_required(login_url='/login/')
@@ -451,13 +445,7 @@ def add_homes(request):
         if not house_type or not address or not House_rent or not city or not vacancy:
             return HttpResponseBadRequest('Missing Field!')
         try:
-            Houses.objects.create(
-                house_type = house_type,
-                address = address,
-                city = city,
-                House_rent = House_rent,
-                vacancy = vacancy
-            )
+            Houses.objects.create(house_type = house_type, address = address, city = city, House_rent = House_rent, vacancy = vacancy)
             return JsonResponse({'status': 'success', 'message': 'Tenant added successfully!'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': 'An error occurred while adding new Tenant.'}, status=500)
@@ -485,7 +473,6 @@ def update_homes(request):
 
         if not all([house_id, house_type, address, city, rent, status]):
             return HttpResponseBadRequest('Missing Fields')
-
         try:
             house = Houses.objects.get(pk=house_id)
             house.house_type = house_type
@@ -508,14 +495,7 @@ def update_homes(request):
 def get_house_details(request, house_id):
     house = get_object_or_404(Houses, pk=house_id)
 
-    data = {
-        'id':house.id,
-        'address': house.address,
-        'city': house.city,
-        'rent': house.House_rent,
-        'house_type': house.house_type,
-        'status': house.vacancy
-    }     
+    data = { 'id':house.id,'address': house.address, 'city': house.city,'rent': house.House_rent,'house_type': house.house_type,'status': house.vacancy}     
     return JsonResponse(data)    
 
 @login_required(login_url='/login/')
@@ -529,11 +509,7 @@ def tenants(request):
     index_offset = (int(page_number) - 1) * items_per_page
 
     houses = Houses.objects.all()
-    context = {
-        'cus': customer,
-        'houses': houses,
-        'index_offset' : index_offset,
-    }
+    context = {'cus': customer,'houses': houses,'index_offset' : index_offset,}
     return render(request, 'customers.html', context)
 
 @login_required(login_url='/login/')
@@ -548,13 +524,7 @@ def add_customer(request):
         if not firstname or not lastname or not email or not phone:
             return HttpResponseBadRequest('Missing Field!')
         try:
-            Customers.objects.create(
-                firstname = firstname,
-                lastname = lastname,
-                email = email,
-                phone = 'whatsapp:' +'+254'+phone,
-                is_active = active
-            )
+            Customers.objects.create{firstname = firstname,lastname = lastname, email = email, phone = 'whatsapp:' +'+254'+phone, is_active = active )
             return JsonResponse({'status': 'success', 'message': 'Tenant added successfully!'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': 'An error occurred while adding new Tenant.'}, status=500)
@@ -595,14 +565,7 @@ def update_Customer(request):
 def get_tenant_details(request, customer_id):
     customer = get_object_or_404(Customers, pk=customer_id)
 
-    data = {
-        'id':customer.id,
-        'firstname': customer.firstname,
-        'lastname': customer.lastname,
-        'email': customer.email,
-        'phone': customer.phone,
-        'active': customer.is_active,
-    }    
+    data = {'id':customer.id,'firstname': customer.firstname,'lastname': customer.lastname,'email': customer.email,'phone': customer.phone,'active': customer.is_active}    
     return JsonResponse(data)
 
 @login_required(login_url='/login/')
