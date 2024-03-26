@@ -141,8 +141,16 @@ class Complaints(models.Model):
 class WhatsappMessage(models.Model):
     sender = models.CharField(max_length = 255)
     receiver = models.CharField(max_length = 255)
-    body = models.URLField(blank = True, null = True)
+    body = models.TextField(blank = True, null = True, max_length = 10000)
     timestamp = models.DateTimeField(auto_now_add = True)
 
     def __str__(self):
         return f"{self.sender} > {self.receiver}: {self.body}"
+
+class AdminMessage(models.Model):
+    tenant = models.ForeignKey(Customers, on_delete=models.CASCADE)  # Reference to the user
+    content = models.TextField()
+    timestamp = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['timestamp']

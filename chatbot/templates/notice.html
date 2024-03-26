@@ -1,10 +1,175 @@
 {% extends "header.html" %}
 {% block content %}
+<style>
+    body{
+        background-color: #fff;
+    }
+
+    ::-webkit-scrollbar {
+        width: 10px;
+    }
+    
+    /* Track */
+    ::-webkit-scrollbar-track {
+        background: #eee; 
+    }
+
+    /* Handle */
+    ::-webkit-scrollbar-thumb {
+        background: #888; 
+    }
+    
+    /* Handle on hover */
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555; 
+    }
+    
+    .wrapper{
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #651FFF;
+    }
+    
+    .main{
+        background-color: #eee;
+        width: 320px;
+        position: relative;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+        padding: 6px 0px 0px 0px;
+    }
+    .scroll{
+        overflow-y: scroll;
+        scroll-behavior: smooth;
+        height: 325px;
+    }
+    .img1{
+        border-radius: 50%;
+        background-color: #66BB6A;
+    }
+    .name{
+        font-size: 8px;
+    
+    }
+    .msg{
+        background-color: #fff;
+        font-size: 11px;
+        padding: 5px;
+        border-radius: 5px;
+        font-weight: 500;
+        color: #3e3c3c;
+    }
+    .between{
+        font-size: 8px;
+        font-weight: 500;
+        color: #a09e9e;
+    }
+    .navbar{
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    
+    }
+    .form-control{
+        font-size: 12px;
+        font-weight: 400;
+        width: 230px;
+        height: 30px;
+        border: none;
+    
+    }
+    form-control: focus{
+        box-shadow: none;
+        overflow: hidden;
+        border: none;
+    }
+    .form-control:focus{
+        box-shadow: none !important;
+    }
+    .icon1{
+        color: #7C4DFF !important;
+        font-size: 18px !important;	
+        cursor: pointer;
+    }
+    
+    .icon2{
+        color: #512DA8 !important;
+        font-size: 18px !important;
+        position: relative;
+        left: 8px;
+        padding: 0px;
+        cursor: pointer;
+    
+    }
+    
+    .icondiv{
+        border-radius: 50%;
+        width: 15px;
+        height: 15px;
+        padding: 2px;
+        position: relative;
+        bottom: 1px;
+    }
+</style>
+{% for message in messages_with_names %}
+<div class="modal fade" id="messageModal{{ message.tenant }}" tabindex="-1" role="dialog" aria-labelledby="messageModalLabel{{ message.tenant }}" aria-hidden="true">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="messageModalLabel{{ message.tenant }}">{{ message.tenant }} {{ message.firstname }} {{ message.lastname }}</h5>
+                <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body chat-modal-body">
+                <div class="">
+                    <div class="px-2 scroll" id="chatMessages">
+                        {% for chat_message in messages_with_names %}
+                            {% if chat_message.sender != 'admin' and chat_message.tenant == message.tenant %}
+                                <div class="d-flex align-items-center">
+                                    <div class="text-left pr-1"><img src="https://img.icons8.com/color/40/000000/guest-female.png" width="30" class="img1" /></div>
+                                    <div class="pr-2 pl-1">
+                                        <span class="name">{{ chat_message.firstname }} {{ chat_message.lastname }}</span>
+                                        <p class="msg">{{ chat_message.content }}</p>
+                                    </div>
+                                </div>
+                            {% elif chat_message.sender == 'admin' and chat_message.tenant_id == message.tenant %}
+                                <div class="d-flex align-items-center text-right justify-content-end ">
+                                    <div class="pr-2">
+                                        <span class="name">Admin</span>
+                                        <p class="msg">{{ chat_message.content }}</p>
+                                    </div>
+                                    <div>
+                                        <img src="https://i.imgur.com/HpF4BFG.jpg" width="30" class="img1" />
+                                    </div>                    
+                                </div>
+                            {% endif %}
+                        {% endfor %}   
+                        <div id="replyContainer{{ message.id }}"></div>                                     
+                    </div>  
+                </div>
+            </div>
+            <div class="modal-footer">
+                <nav class="navbar bg-white navbar-expand-sm d-flex justify-content-between">
+                    <input type="text" name="reply_text" id="replyText{{ message.id }}" class="form-control" placeholder="Type a message...">
+                    <input type="hidden" name="phone" id="phone{{ message.id }}" value="{{ chat_message.sender }}">
+                    <input type="hidden" id="csrfToken" value="{{ csrf_token }}">                   
+                    <div class="icondiv d-flex justify-content-end">
+                        <i class="fa fa-arrow-circle-right icon2" onclick="sendReply({{ message.id }})"></i>
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </div>
+</div>
+{% endfor %}
 
 <div class="container-fluid px-4">
-    <h1 class="mt-4">Notices</h1>
+    <h1 class="mt-4">Messages</h1>
     <ol class="breadcrumb mb-4">
-        <li class="breadcrumb-item active">Notices</li>
+        <li class="breadcrumb-item active">Messages</li>
     </ol>
     <div class="container-fluid">
         <!-- Row -->
@@ -12,12 +177,10 @@
             <div class="col-lg-12 col-md-6">
                 <div class="card">
                     <div class="card-body">
-                        <h4 class="card-title">Notice Board <i class="mdi mdi-bell"></i>
-                            <sup style="color:red">2</sup>
-                        </h4>
+                        <h4 class="card-title">User Messages </h4>
                     </div>
-                    <div class="card-body" style="overflow: visible;">
-                        <div class="table-responsive slimScrollDiv" style="height: 300px;">
+                    <div class="card-body">
+                        <div class="table-responsive">
                             <table class="table table-hover table-bordered earning-box">
                                 <thead>
                                     <tr>
@@ -29,14 +192,14 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {% for message in messages %}
+                                    {% for message in table_messages %}
                                     <tr>
                                         <td scope="row">{{ forloop.counter }}</td>
                                         <td scope="row">{{ message.firstname }} {{ message.lastname }}</td>
                                         <td scope="row">
                                             {% if message.content|length > 50 %}
                                             {{ message.content|slice:":50" }}...
-                                            <a href="#" data-toggle="modal" data-target="#messageModal{{ message.id }}">Read More</a>
+                                            <a href="#" data-bs-toggle="modal" data-bs-target="#messageModal{{ message.tenant }}">Read More</a>
                                             {% else %}
                                             {{ message.content }}
                                             {% endif %}
@@ -44,12 +207,12 @@
                                         <td scope="row">{{ message.timestamp }}</td>
                                         <td class="action-row">
                                             <div class="dropdown">
-                                                <a class="dropdown-toggle" href="#" role="button" id="dropdownMenuLink{{ message.lastname }}" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                <a  href="#" role="button" id="dropdownMenuLink{{ message.id }}" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                                     <span class="text-muted">&#8942;</span> <!-- The three vertical dots -->
                                                 </a>
                                                 <div class="dropdown-menu" aria-labelledby="dropdownMenuLink{{ message.id }}">
-                                                    <a class="dropdown-item" href="#" data-toggle="modal" data-target="#replyModal{{ message.id }}">Reply</a>
-                                                    <a class="dropdown-item" href="#" data-toggle="modal" data-target="#deleteModal{{ message.id }}">Delete</a>
+                                                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#messageModal{{ message.tenant }}">Reply</a>
+                                                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal{{ message.id }}">Delete</a>
                                                     <a class="dropdown-item" href="#">Other</a>
                                                 </div>
                                             </div>
@@ -65,4 +228,57 @@
         </div>
     </div>
 </div>
+<script>
+    function sendReply(messageId) {
+        var replyText = document.getElementById('replyText' + messageId).value;
+        var csrfToken = document.getElementById('csrfToken').value; // Get the CSRF token
+        if (replyText.trim() === "") {
+            alert("Please type a reply.");
+            return;
+        }
+        $.ajax({
+            url: '/dashboard/', // Ensure this is the correct endpoint for sending replies
+            type: 'POST',
+            data: {
+                'csrfmiddlewaretoken': csrfToken,
+                'message_id': messageId,
+                'reply_text': replyText,
+            },
+            success: function(response) {
+                var newReply = '<div class="d-flex align-items-center text-right justify-content-end ">' +
+                               '<div class="pr-2">' +
+                               '<span class="name">Admin</span>' +
+                               '<p class="msg">' + response.reply_text + '</p>' +
+                               '</div>' +
+                               '<div><img src="https://i.imgur.com/HpF4BFG.jpg" width="30" class="img1" /></div>' +
+                               '</div>';
+                document.getElementById('replyContainer' + messageId).innerHTML += newReply;
+                document.getElementById('replyText' + messageId).value = ''; // Clear the input field
+                
+                // Trigger 'messagesUpdated' event for scrolling to bottom
+                $('#messageModal').trigger('messagesUpdated');
+            },
+            error: function(error) {
+                console.error("Error sending reply:", error);
+                alert("Error sending reply. Please try again.");
+            }
+        });
+    }
+    
+    $(document).ready(function(){
+        function scrollToBottom() {
+            var chatMessages = document.getElementById('chatMessages');
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        $('#messageModal').on('shown.bs.modal', function () {
+            scrollToBottom(); // Scroll to bottom when modal is shown
+        });
+        
+        // Scroll to bottom when new messages are added
+        $('#messageModal').on('messagesUpdated', function () {
+            scrollToBottom();
+        });
+    });
+</script>
 {% endblock content %}

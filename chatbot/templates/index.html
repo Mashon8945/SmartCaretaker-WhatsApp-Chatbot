@@ -1,27 +1,118 @@
-{% extends "header.html" %} 
-{% load static %}
+{% extends "header.html" %}
+{% block content %}
 <style>
-    /* Chat bubble styles */
-    .chat-message {
-        padding: 10px;
-        margin-bottom: 10px;
-        border-radius: 10px;
-        max-width: 70%;
+    body{
+        background-color: #fff;
     }
 
-    .chat-message-left {
-        background-color: #f0f0f0; /* User message background color */
-        float: left;
+    ::-webkit-scrollbar {
+        width: 10px;
+    }
+    
+    /* Track */
+    ::-webkit-scrollbar-track {
+        background: #eee; 
     }
 
-    .chat-message-right {
-        background-color: #007bff; /* Your reply background color */
-        color: #fff; /* Your reply text color */
-        float: right;
+    /* Handle */
+    ::-webkit-scrollbar-thumb {
+        background: #888; 
+    }
+    
+    /* Handle on hover */
+    ::-webkit-scrollbar-thumb:hover {
+        background: #555; 
+    }
+    
+    .wrapper{
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #651FFF;
+    }
+    
+    .main{
+        background-color: #eee;
+        width: 320px;
+        position: relative;
+        border-radius: 8px;
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+        padding: 6px 0px 0px 0px;
+    }
+    .scroll{
+        overflow-y: scroll;
+        scroll-behavior: smooth;
+        height: 325px;
+    }
+    .img1{
+        border-radius: 50%;
+        background-color: #66BB6A;
+    }
+    .name{
+        font-size: 8px;
+    
+    }
+    .msg{
+        background-color: #fff;
+        font-size: 11px;
+        padding: 5px;
+        border-radius: 5px;
+        font-weight: 500;
+        color: #3e3c3c;
+    }
+    .between{
+        font-size: 8px;
+        font-weight: 500;
+        color: #a09e9e;
+    }
+    .navbar{
+        border-bottom-left-radius: 8px;
+        border-bottom-right-radius: 8px;
+        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+    
+    }
+    .form-control{
+        font-size: 12px;
+        font-weight: 400;
+        width: 230px;
+        height: 30px;
+        border: none;
+    
+    }
+    form-control: focus{
+        box-shadow: none;
+        overflow: hidden;
+        border: none;
+    }
+    .form-control:focus{
+        box-shadow: none !important;
+    }
+    .icon1{
+        color: #7C4DFF !important;
+        font-size: 18px !important;	
+        cursor: pointer;
+    }
+    
+    .icon2{
+        color: #512DA8 !important;
+        font-size: 18px !important;
+        position: relative;
+        left: 8px;
+        padding: 0px;
+        cursor: pointer;
+    
+    }
+    
+    .icondiv{
+        border-radius: 50%;
+        width: 15px;
+        height: 15px;
+        padding: 2px;
+        position: relative;
+        bottom: 1px;
     }
 </style>
-
-{% block content %}        
     <div class="container-fluid px-4">
         <h1 class="mt-4">Dashboard</h1>
         <ol class="breadcrumb mb-4">
@@ -35,7 +126,7 @@
                         <strong><span>{{ total_houses }}</span></strong>
                     </div>
                     <div class="card-footer d-flex align-items-center justify-content-between">
-                        <a class="small text-white stretched-link" href="{% url 'tenants' %}">View Details</a>
+                        <a class="small text-white stretched-link" href="{% url 'homes' %}">View Details</a>
                         <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                     </div>
                 </div>
@@ -59,7 +150,7 @@
                         <strong><span>{{ active_tenants }}</span></strong>
                     </div>
                     <div class="card-footer d-flex align-items-center justify-content-between">
-                        <a class="small text-white stretched-link" href="#">View Details</a>
+                        <a class="small text-white stretched-link" href="{% url 'tenants' %}">View Details</a>
                         <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                     </div>
                 </div>
@@ -71,34 +162,59 @@
                         <strong><span>{{ inactive_tenants }}</span></strong>
                     </div>
                     <div class="card-footer d-flex align-items-center justify-content-between">
-                        <a class="small text-white stretched-link" href="#">View Details</a>
+                        <a class="small text-white stretched-link" href="{% url 'tenants' %}">View Details</a>
                         <div class="small text-white"><i class="fas fa-angle-right"></i></div>
                     </div>
                 </div>
             </div>
         </div>
         {% for message in messages %}
-        <div class="modal fade" id="messageModal{{ message.id }}" tabindex="-1" role="dialog" aria-labelledby="messageModalLabel{{ message.id }}" aria-hidden="true">
+        <div class="modal fade" id="messageModal{{ message.tenant }}" tabindex="-1" role="dialog" aria-labelledby="messageModalLabel{{ message.tenant }}" aria-hidden="true">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="messageModalLabel{{ message.id }}">Sender: {{ message.firstname }} {{ message.lastname }}</h5>
+                        <h5 class="modal-title" id="messageModalLabel{{ message.tenant }}">{{ message.tenant }} {{ message.firstname }} {{ message.lastname }}</h5>
                         <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
                     <div class="modal-body chat-modal-body">
-                        <!-- User message bubble -->
-                        <div class="chat-message chat-message-left">
-                            {{ message.content }}
+                        <div class="">
+                            <div class="px-2 scroll" id="chatMessages">                        
+                                {% for chat_message in messages %}
+                                    {% if chat_message.sender != 'admin' and chat_message.tenant == message.tenant %}
+                                    <div class="d-flex align-items-center">
+                                        <div class="text-left pr-1"><img src="https://img.icons8.com/color/40/000000/guest-female.png" width="30" class="img1" /></div>
+                                        <div class="pr-2 pl-1">
+                                            <span class="name">{{ chat_message.firstname }} {{ chat_message.lastname }}</span>
+                                            <p class="msg">{{ chat_message.content }}</p>
+                                        </div>
+                                    </div>
+                                    {% elif chat_message.sender == 'admin' and chat_message.tenant_id == message.tenant %}
+                                    <div class="d-flex align-items-center text-right justify-content-end ">
+                                        <div class="pr-2">
+                                            <span class="name">Admin</span>
+                                            <p class="msg">{{ chat_message.content }}</p>
+                                        </div>
+                                        <div>
+                                            <img src="https://i.imgur.com/HpF4BFG.jpg" width="30" class="img1" />
+                                        </div>                    
+                                    </div>
+                                    {% endif %}
+                                {% endfor %}   
+                                <div id="replyContainer{{ message.id }}"></div>                                     
+                            </div>
                         </div>
-                        <!-- Placeholder for replies -->
-                        <div id="replyContainer{{ message.id }}" class="reply-container"></div>
                     </div>
                     <div class="modal-footer">
-                        <input type="hidden" id="csrfToken" value="{{ csrf_token }}">
-                        <textarea id="replyText{{ message.id }}" class="form-control" placeholder="Type your reply here..."></textarea>
-                        <button type="button" class="btn btn-primary" onclick="sendReply({{ message.id }})">Send Reply</button>
+                        <nav class="navbar bg-white navbar-expand-sm d-flex justify-content-between">
+                            <input type="text" name="reply_text" id="replyText{{ message.id }}" class="form-control" placeholder="Type a message...">
+                            <input type="hidden" name="phone" id="phone{{ message.id }}" value="{{ chat_message.sender }}">
+                            <input type="hidden" id="csrfToken" value="{{ csrf_token }}">                   
+                            <div class="icondiv d-flex justify-content-end">
+                                <i class="fa fa-arrow-circle-right icon2" onclick="sendReply({{ message.id }})"></i>
+                            </div>
+                        </nav>
                     </div>
                 </div>
             </div>
@@ -110,8 +226,8 @@
                 <div class="col-lg-7">
                     <div class="card">
                         <div class="card-body">
-                            <h4 class="card-title">Notice Board <i class="mdi mdi-bell"></i>
-                                <sup style="color:red">2</sup>
+                            <h4 class="card-title">Recent messages <i class="mdi mdi-bell"></i>
+                                <sup style="color:red">{{ message_count }}</sup>
                             </h4>
                         </div>
                         <div class="card-body" style="overflow: visible;">
@@ -127,14 +243,14 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {% for message in messages %}
+                                        {% for message in table_messages %}
                                         <tr>
                                             <td scope="row">{{ forloop.counter }}</td>
                                             <td scope="row">{{ message.firstname }} {{ message.lastname }}</td>
                                             <td scope="row">
                                                 {% if message.content|length > 50 %}
                                                     {{ message.content|slice:":50" }}...
-                                                    <a href="#" data-bs-toggle="modal" data-bs-target="#messageModal{{ message.id }}">Read More</a>
+                                                    <a href="#" data-bs-toggle="modal" data-bs-target="#messageModal{{ message.tenant }}">Read More</a>
                                                 {% else %}
                                                     {{ message.content }}
                                                 {% endif %}
@@ -146,7 +262,7 @@
                                                         <span class="text-muted">&#8942;</span> <!-- The three vertical dots -->
                                                     </a>
                                                     <div class="dropdown-menu" aria-labelledby="dropdownMenuLink{{ message.id }}">
-                                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#messageModal{{ message.id }}">Reply</a>
+                                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#messageModal{{ message.tenant }}">Reply</a>
                                                         <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal{{ message.id }}">Delete</a>
                                                         <a class="dropdown-item" href="#">Other</a>
                                                     </div>
@@ -162,189 +278,116 @@
                     </div>
                 </div>
                 <div class="col-lg-5">
-                    
-                    <link href="{% static 'css/style2.css' %}" rel="stylesheet" />  
-                    <div class="table-widget"><table>
-                        <caption>
-                            Transactions
-                            <span class="table-row-count">(10)</span>
-                        </caption> 
-                        <thead>
-                            <tr>
-                                <th>Name</th>
-                                <th>Amount</th>
-                                <th>Status</th>
-                                <th>Processed</th>
-                            </tr>
-                        </thead>
-                        <tbody id="table-rows">
-                            <tr>
-                                    <td class="team-member-profile">
-                                        <img alt="James Alexander" src="assets/profile.jpg">
-                                        <span class="profile-info">
-                                            <span class="profile-info__name">
-                                                James Alexander
-                                            </span>
-                                            <span class="profile-info__alias">
-                                                james@example.com
-                                            </span>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        $1,000
-                                    </td>
-                                    <td>
-                                        <span class="status status--completed">
-                                            completed
-                                        </span>
-                                    </td>
-                                    <td>
-                                        Fri, Oct 20, 2023, 7:12 PM
-                                    </td>
-                                </tr><tr>
-                                    <td class="team-member-profile">
-                                        <img alt="Lilia Taylor" src="assets/liliya.jpg">
-                                        <span class="profile-info">
-                                            <span class="profile-info__name">
-                                                Lilia Taylor
-                                            </span>
-                                            <span class="profile-info__alias">
-                                                lilia.taylor@example.com
-                                            </span>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        $1,115
-                                    </td>
-                                    <td>
-                                        <span class="status status--error">
-                                            error
-                                        </span>
-                                    </td>
-                                    <td>
-                                        Sun, Oct 22, 2023, 4:12 PM
-                                    </td>
-                                </tr><tr>
-                                    <td class="team-member-profile">
-                                        <img alt="Drew Cano" src="assets/drew.jpg">
-                                        <span class="profile-info">
-                                            <span class="profile-info__name">
-                                                Drew Cano
-                                            </span>
-                                            <span class="profile-info__alias">
-                                                drew.crano@example.com
-                                            </span>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        $8,220
-                                    </td>
-                                    <td>
-                                        <span class="status status--completed">
-                                            completed
-                                        </span>
-                                    </td>
-                                    <td>
-                                        Sun, Oct 22, 2023, 9:12 PM
-                                    </td>
-                                </tr><tr>
-                                    <td class="team-member-profile">
-                                        <img alt="Nate Conor" src="assets/nate.jpg">
-                                        <span class="profile-info">
-                                            <span class="profile-info__name">
-                                                Nate Conor
-                                            </span>
-                                            <span class="profile-info__alias">
-                                                nate@example.com
-                                            </span>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        $1,750
-                                    </td>
-                                    <td>
-                                        <span class="status status--error">
-                                            error
-                                        </span>
-                                    </td>
-                                    <td>
-                                        Mon, Oct 23, 2023, 1:05 AM
-                                    </td>
-                                </tr><tr>
-                                    <td class="team-member-profile">
-                                        <img alt="Melissa Brantley" src="assets/melissa.jpg">
-                                        <span class="profile-info">
-                                            <span class="profile-info__name">
-                                                Melissa Brantley
-                                            </span>
-                                            <span class="profile-info__alias">
-                                                melissa@example.com
-                                            </span>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        $220
-                                    </td>
-                                    <td>
-                                        <span class="status status--pending">
-                                            pending
-                                        </span>
-                                    </td>
-                                    <td>
-                                        Tue, Oct 24, 2023, 10:05 PM
-                                    </td>
-                                </tr>
-                        </tbody>
-                        <tfoot>
-                            <tr>
-                                <td colspan="4">
-                                    <ul class="pagination">
-                                        
-                                        <li>
-                                <a title="page 1" class="active" href="?page=1">
-                                    1
-                                </a>
-                            </li><li>
-                                <a title="page 2" href="?page=2">
-                                    2
-                                </a>
-                            </li>
-                                    </ul>
-                                </td>
-                            </tr>
-                        </tfoot>
-                    </table></div>
+                    <div class="card">
+                        <div class="card-body">
+                            <h4 class="card-title">New transactions <i class="mdi mdi-bell"></i>
+                            </h4>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive slimScrollDiv" >
+                                <table class="table table-hover table-bordered earning-box">
+                                    <caption><a href="{% url 'transactions' %}">
+                                        View all
+                                        <span class="table-row-count"></span></a>
+                                    </caption> 
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>Amount</th>
+                                            <th>Processed</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="table-rows">
+                                        {% for transaction in transactions %}
+                                        <tr>
+                                            <td class="team-member-profile">
+                                                <span class="profile-info">
+                                                    <span class="profile-info__name">
+                                                        {{ transaction.tenant.firstname }} {{ transaction.tenant.lastname }}
+                                                    </span>
+                                                </span>
+                                            </td>
+                                            <td class="text-success" scope="row">
+                                                <span class="me-1"></span>+{{ transaction.amount }}
+                                            </td>
+                                                <td>
+                                                    {{transaction.date}}
+                                                </td>
+                                        </tr>   
+                                        {% endfor %} 
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
     <script>
-        function sendReply(messageId) {
-            var replyText = document.getElementById('replyText' + messageId).value;
-            var csrfToken = document.getElementById('csrfToken').value; // Get the CSRF token
-            if (replyText.trim() === "") {
-                alert("Please type a reply.");
-                return;
+        $(document).ready(function(){
+            function scrollToBottom() {
+                var chatMessages = document.getElementById('chatMessages');
+                chatMessages.scrollTop = chatMessages.scrollHeight;
             }
-            $.ajax({
-                url: '/dashboard/',
-                type: 'POST',
-                data: {
-                    'csrfmiddlewaretoken': csrfToken, // Include the CSRF token in the data
-                    'message_id': messageId,
-                    'reply_text': replyText,
-                },
-                success: function(response) {
-                    // Create the reply bubble
-                    var newReply = '<div class="chat-message chat-message-right">' + response.reply_text + '</div>';
-                    document.getElementById('replyContainer' + messageId).innerHTML += newReply;
-                    document.getElementById('replyText' + messageId).value = ''; // Clear the input field
-                },
-                error: function(error) {
-                    console.error("Error sending reply:", error);
-                    alert("Error sending reply. Please try again.");
-                }
+    
+            // Scroll to bottom when modal is shown
+            $('#messageModal{{ message.id }}').on('shown.bs.modal', function () {
+                scrollToBottom();
             });
-        }
-        </script>
+    
+            // Scroll to bottom when new messages are added
+            $('#messageModal{{ message.id }}').on('messagesUpdated', function () {
+                scrollToBottom();
+            });
+    
+            // Function to send a reply
+            function sendReply(messageId) {
+                var replyText = $('#replyText' + messageId).val();
+                var csrfToken = $('#csrfToken').val(); // Get the CSRF token
+    
+                if (replyText.trim() === "") {
+                    alert("Please type a reply.");
+                    return;
+                }
+    
+                $.ajax({
+                    url: '/dashboard/', // Update with the correct URL for sending replies
+                    type: 'POST',
+                    data: {
+                        'csrfmiddlewaretoken': csrfToken,
+                        'message_id': messageId,
+                        'reply_text': replyText,
+                    },
+                    success: function(response) {
+                        // Assuming response.reply_text contains the reply message content
+                        var newReply = '<div class="d-flex align-items-center text-right justify-content-end ">' +
+                                       '<div class="pr-2">' +
+                                       '<span class="name">Admin</span>' +
+                                       '<p class="msg">' + response.reply_text + '</p>' +
+                                       '</div>' +
+                                       '<div><img src="https://i.imgur.com/HpF4BFG.jpg" width="30" class="img1" /></div>' +
+                                       '</div>';
+    
+                        $('#replyContainer{{ message.id }}').append(newReply);
+                        $('#replyText' + messageId).val(''); // Clear the input field
+    
+                        // Trigger 'messagesUpdated' event for scrolling to bottom
+                        $('#messageModal{{ message.id }}').trigger('messagesUpdated');
+                    },
+                    error: function(error) {
+                        console.error("Error sending reply:", error);
+                        alert("Error sending reply. Please try again.");
+                    }
+                });
+            }
+    
+            // Event listener for sending a reply when the send button is clicked
+            $('.send-reply-btn').on('click', function() {
+                var messageId = $(this).data('message-id');
+                sendReply(messageId);
+            });
+        });
+    </script>
+    
 {% endblock content %}

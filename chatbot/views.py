@@ -5,7 +5,7 @@ from django.contrib.auth import login, authenticate
 from django.contrib.auth.hashers import make_password
 from django.contrib.auth.decorators import login_required
 from twilio.rest import Client
-from .models import Owner, Houses, Customers, WhatsappMessage, Assignment, Transactions, Invoice, CustomerState
+from .models import Owner, Houses, Customers, WhatsappMessage, Assignment, Transactions, Invoice, CustomerState, AdminMessage
 from .forms import AssignmentForm
 from django.views.decorators.http import require_POST
 from django.shortcuts import get_object_or_404
@@ -86,24 +86,57 @@ def header(request):
     return render(request, 'header.html', context)
 
 def notice(request):
-    messages = WhatsappMessage.objects.all().order_by('-timestamp')
+    messages = WhatsappMessage.objects.all().order_by('-timestamp')  
+    admin_messages = AdminMessage.objects.all().order_by('timestamp')
     customers = Customers.objects.all()
+    table = Paginator(WhatsappMessage.objects.all().order_by('-timestamp'))
+    table_page = page.get(page)
 
-    phone_to_name = {customer.phone: (customer.firstname, customer.lastname) for customer in customers}
-    messages_with_names = [
+    phone_to_name = {customer.phone: (customer.firstname, customer.lastname, customer.id) for customer in customers}
+    table_messages = [
         {
             'firstname': phone_to_name[message.sender][0],
             'lastname': phone_to_name[message.sender][1],
+            'tenant':phone_to_name[message.sender][2],
             'content': message.body,
+            'id': message.id,
             'timestamp': message.timestamp
         }
         for message in messages if message.sender in phone_to_name
     ]
-    context = {
-        'messages': messages_with_names,
-        'customers':customers,
-    }
-    return render(request, 'notice.html', context)
+
+    # Combine user and admin messages
+    combined_messages = list(messages) + list(admin_messages)
+
+    # Sort by timestamp
+    combined_messages.sort(key=lambda x: x.timestamp)
+
+    # Create a messages_with_names list containing information for rendering
+    messages_with_names = []
+    for message in combined_messages:
+        if isinstance(message, WhatsappMessage) and message.sender in phone_to_name:
+            messages_with_names.append({
+                'firstname': phone_to_name[message.sender][0],
+                'lastname': phone_to_name[message.sender][1],
+                'tenant':phone_to_name[message.sender][2],
+                'content': message.body,
+                'timestamp': message.timestamp,
+                'sender': message.sender,
+                'id': message.id,
+            })
+        elif isinstance(message, AdminMessage):
+            # Assuming that AdminMessage has a relation to a customer through 'tenant'
+            messages_with_names.append({
+                'firstname': message.tenant.firstname,
+                'lastname': message.tenant.lastname,
+                'tenant_id': message.tenant.id,
+                'content': message.content,
+                'timestamp': message.timestamp,
+                'sender': 'admin',
+                'id': message.id
+            })
+        
+    return render(request, 'notice.html', {'messages_with_names': messages_with_names, 'table_messages':table_messages})
 
 @login_required(login_url='/login/')
 @csrf_exempt
@@ -117,46 +150,101 @@ def dashboard(request):
         from_whatsapp_number = 'whatsapp:+14155238886'
         to_whatsapp_number = message_to_reply.sender
 
+        tenant = Customers.objects.get(phone = to_whatsapp_number).id 
+
         client.messages.create(body = reply_text, from_ = from_whatsapp_number, to = to_whatsapp_number)
         message_to_reply.replied = True
         message_to_reply.save()
+        try:
+            # Save the new admin message
+            new_reply = AdminMessage.objects.create(
+                tenant_id=tenant,
+                content=reply_text
+            )
+            new_reply.save()
+            
+            # Format the response data
+            response_data = {
+                'reply_text': new_reply.content,
+                'timestamp': new_reply.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
+            }
+            return JsonResponse(response_data)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=400)
 
         # After saving the reply or sending the message, return a JsonResponse
-        return JsonResponse({'reply_text': reply_text}, status=200)
+        # return JsonResponse({'reply_text': reply_text}, status=200)
         
-
     current_time = timezone.now()
     two_days_ago = current_time - timedelta(days=2)
     recent_messages = WhatsappMessage.objects.filter(timestamp__gte=two_days_ago).order_by('-timestamp')
+    recent_messages_count = WhatsappMessage.objects.filter(timestamp__gte=two_days_ago).order_by('-timestamp').count()
+    messages = WhatsappMessage.objects.all()
 
-    recent_trasactions = Transactions.objects.all().order_by('-id')
+    recent_transactions = Transactions.objects.filter(date__gte=two_days_ago).order_by('-date')
 
     active_tenants = Customers.objects.filter(is_active = 1).count()
     inactive_tenants = Customers.objects.filter(is_active = 0).count()
     total_houses = Houses.objects.all().count()
     customers = Customers.objects.all()
+    admin_messages = AdminMessage.objects.all().order_by('timestamp')
     vacant = Houses.objects.filter(vacancy__in = ['VACANT', 'MAINTENANCE']).count()
     
-    phone_to_name = {customer.phone: (customer.firstname, customer.lastname) for customer in customers}
+    phone_to_name = {customer.phone: (customer.firstname, customer.lastname, customer.id) for customer in customers}   
 
-    messages_with_names = [
+    table_messages = [
         {
             'firstname': phone_to_name[message.sender][0],
             'lastname': phone_to_name[message.sender][1],
+            'tenant': phone_to_name[message.sender][2],
             'content': message.body,
             'id': message.id,
             'timestamp': message.timestamp
         }
         for message in recent_messages if message.sender in phone_to_name
     ]
+    # Combine user and admin messages
+    combined_messages = list(messages) + list(admin_messages)
+
+    # Sort by timestamp
+    combined_messages.sort(key=lambda x: x.timestamp)
+
+    # Create a messages_with_names list containing information for rendering
+    messages_with_names = []
+    for message in combined_messages:
+        if isinstance(message, WhatsappMessage) and message.sender in phone_to_name:
+            messages_with_names.append({
+                'firstname': phone_to_name[message.sender][0],
+                'lastname': phone_to_name[message.sender][1],
+                'tenant':phone_to_name[message.sender][2],
+                'content': message.body,
+                'timestamp': message.timestamp,
+                'sender': message.sender,
+                'id': message.id,
+            })
+        elif isinstance(message, AdminMessage):
+            # Assuming that AdminMessage has a relation to a customer through 'tenant'
+            messages_with_names.append({
+                'firstname': message.tenant.firstname,
+                'lastname': message.tenant.lastname,
+                'tenant_id': message.tenant.id,
+                'content': message.content,
+                'timestamp': message.timestamp,
+                'sender': 'admin',
+                'id': message.id
+            })
+        
 
     context = {
         'active_tenants': active_tenants, 
         'vacant': vacant,
-        'messages': messages_with_names,
+        'message_count': recent_messages_count,
         'customers':customers,
         'inactive_tenants': inactive_tenants,
         'total_houses': total_houses,
+        'messages': messages_with_names,
+        'table_messages': table_messages,
+        'transactions': recent_transactions
     }
     return render(request, 'index.html', context)
 
@@ -367,7 +455,6 @@ def whatsapp_webhook(request):
         return HttpResponse(str(response), content_type='application/xml', status=200)
     else:
         return HttpResponse("Method Not Allowed", status=405)
-
 
 @login_required(login_url='/login/')
 def homes(request):
@@ -635,6 +722,7 @@ def generate_payment_link(request, invoice_id):
 
         payment_link = request.build_absolute_uri(reverse('payment_form', kwargs={'payment_uuid': payment_uuid}))
         messages.success(request, 'Link has been sent successfully')
+        print(payment_link)
         return payment_link
     except Invoice.DoesNotExist:
         messages.error(request, 'Invoice does not exist')
