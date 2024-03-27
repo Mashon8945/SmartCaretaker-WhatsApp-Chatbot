@@ -96,11 +96,11 @@
                                                 {% for assignment in assignments %}
                                                     {% if assignment.house == house %}
                                                     <li>
-                                                        <form action="{% url 'unassign_house' assignment.id %}" method="post">
+                                                        <form id="unassignForm{{ assignment.id }}" action="{% url 'unassign_house' assignment.id %}" method="post">
                                                             {% csrf_token %}
-                                                            <button class="dropdown-item" type="submit">Unassign Tenant</button>
+                                                            <button class="dropdown-item unassign-btn" type="button" data-assignment-id="{{ assignment.id }}">Unassign Tenant</button>
                                                         </form>
-                                                    </li>
+                                                    </li>                                                    
                                                     {% endif %}
                                                 {% endfor %}
                                                 <li><button class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editHouseModal" onclick="loadHouseDetails({{ house.id }})" >Edit House</button></li>
@@ -381,8 +381,21 @@
                 }
             });
         }
-        
+        $(document).ready(function() {
+            $(".unassign-btn").click(function() {
+                var assignmentId = $(this).data("assignment-id");
+                var form = $("#unassignForm" + assignmentId);
+
+                // Show confirmation dialog
+                var confirmed = confirm("Are you sure you want to unassign this tenant?");
+
+                if (confirmed) {
+                    form.submit(); // Submit the form if confirmed
+                }
+            });
+        });
     </script>
+
     
 
 {% endblock content %}

@@ -173,37 +173,37 @@
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="messageModalLabel{{ message.tenant }}">{{ message.tenant }} {{ message.firstname }} {{ message.lastname }}</h5>
+                        <h5 class="modal-title" id="messageModalLabel{{ message.tenant }}">{{ message.firstname }} {{ message.lastname }}</h5>
                         <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
                     <div class="modal-body chat-modal-body">
                         <div class="">
-                            <div class="px-2 scroll" id="chatMessages">                        
+                            <div class="px-2 scroll" id="chatMessages{{ message.tenant }}">
                                 {% for chat_message in messages %}
                                     {% if chat_message.sender != 'admin' and chat_message.tenant == message.tenant %}
-                                    <div class="d-flex align-items-center">
-                                        <div class="text-left pr-1"><img src="https://img.icons8.com/color/40/000000/guest-female.png" width="30" class="img1" /></div>
-                                        <div class="pr-2 pl-1">
-                                            <span class="name">{{ chat_message.firstname }} {{ chat_message.lastname }}</span>
-                                            <p class="msg">{{ chat_message.content }}</p>
+                                        <div class="d-flex align-items-center">
+                                            <div class="text-left pr-1"><img src="https://img.icons8.com/color/40/000000/guest-female.png" width="30" class="img1" /></div>
+                                            <div class="pr-2 pl-1">
+                                                <span class="name">{{ chat_message.firstname }} {{ chat_message.lastname }}</span>
+                                                <p class="msg">{{ chat_message.content }}</p>
+                                            </div>
                                         </div>
-                                    </div>
                                     {% elif chat_message.sender == 'admin' and chat_message.tenant_id == message.tenant %}
-                                    <div class="d-flex align-items-center text-right justify-content-end ">
-                                        <div class="pr-2">
-                                            <span class="name">Admin</span>
-                                            <p class="msg">{{ chat_message.content }}</p>
+                                        <div class="d-flex align-items-center text-right justify-content-end ">
+                                            <div class="pr-2">
+                                                <span class="name">Admin</span>
+                                                <p class="msg">{{ chat_message.content }}</p>
+                                            </div>
+                                            <div>
+                                                <img src="https://i.imgur.com/HpF4BFG.jpg" width="30" class="img1" />
+                                            </div>                    
                                         </div>
-                                        <div>
-                                            <img src="https://i.imgur.com/HpF4BFG.jpg" width="30" class="img1" />
-                                        </div>                    
-                                    </div>
                                     {% endif %}
                                 {% endfor %}   
                                 <div id="replyContainer{{ message.id }}"></div>                                     
-                            </div>
+                            </div>  
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -325,69 +325,59 @@
         </div>
     </div>
     <script>
-        $(document).ready(function(){
-            function scrollToBottom() {
-                var chatMessages = document.getElementById('chatMessages');
-                chatMessages.scrollTop = chatMessages.scrollHeight;
+        function sendReply(messageId) {
+            var replyText = document.getElementById('replyText' + messageId).value;
+            var csrfToken = document.getElementById('csrfToken').value; // Get the CSRF token
+            if (replyText.trim() === "") {
+                alert("Please type a reply.");
+                return;
             }
-    
-            // Scroll to bottom when modal is shown
-            $('#messageModal{{ message.id }}').on('shown.bs.modal', function () {
-                scrollToBottom();
-            });
-    
-            // Scroll to bottom when new messages are added
-            $('#messageModal{{ message.id }}').on('messagesUpdated', function () {
-                scrollToBottom();
-            });
-    
-            // Function to send a reply
-            function sendReply(messageId) {
-                var replyText = $('#replyText' + messageId).val();
-                var csrfToken = $('#csrfToken').val(); // Get the CSRF token
-    
-                if (replyText.trim() === "") {
-                    alert("Please type a reply.");
-                    return;
+            $.ajax({
+                url: '/dashboard/',
+                type: 'POST',
+                data: {
+                    'csrfmiddlewaretoken': csrfToken,
+                    'message_id': messageId,
+                    'reply_text': replyText,
+                },
+                success: function(response) {
+                    var newReply = '<div class="d-flex align-items-center text-right justify-content-end ">' +
+                                   '<div class="pr-2">' +
+                                   '<span class="name">Admin</span>' +
+                                   '<p class="msg">' + response.reply_text + '</p>' +
+                                   '</div>' +
+                                   '<div><img src="https://i.imgur.com/HpF4BFG.jpg" width="30" class="img1" /></div>' +
+                                   '</div>';
+                    document.getElementById('replyContainer' + messageId).innerHTML += newReply;
+                    document.getElementById('replyText' + messageId).value = ''; // Clear the input field
+                    
+                    // Trigger 'messagesUpdated' event for scrolling to bottomn
+                    $('#messageModal' + messageId).trigger('messagesUpdated'); // Trigger update for the specific modal
+                },
+                error: function(error) {
+                    console.error("Error sending reply:", error);
+                    alert("Error sending reply. Please try again.");
                 }
-    
-                $.ajax({
-                    url: '/dashboard/', // Update with the correct URL for sending replies
-                    type: 'POST',
-                    data: {
-                        'csrfmiddlewaretoken': csrfToken,
-                        'message_id': messageId,
-                        'reply_text': replyText,
-                    },
-                    success: function(response) {
-                        // Assuming response.reply_text contains the reply message content
-                        var newReply = '<div class="d-flex align-items-center text-right justify-content-end ">' +
-                                       '<div class="pr-2">' +
-                                       '<span class="name">Admin</span>' +
-                                       '<p class="msg">' + response.reply_text + '</p>' +
-                                       '</div>' +
-                                       '<div><img src="https://i.imgur.com/HpF4BFG.jpg" width="30" class="img1" /></div>' +
-                                       '</div>';
-    
-                        $('#replyContainer{{ message.id }}').append(newReply);
-                        $('#replyText' + messageId).val(''); // Clear the input field
-    
-                        // Trigger 'messagesUpdated' event for scrolling to bottom
-                        $('#messageModal{{ message.id }}').trigger('messagesUpdated');
-                    },
-                    error: function(error) {
-                        console.error("Error sending reply:", error);
-                        alert("Error sending reply. Please try again.");
-                    }
-                });
-            }
-    
-            // Event listener for sending a reply when the send button is clicked
-            $('.send-reply-btn').on('click', function() {
-                var messageId = $(this).data('message-id');
-                sendReply(messageId);
             });
+        }
+        
+        function scrollToBottom(tenantId) {
+            var chatMessages = document.getElementById('chatMessages' + tenantId);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+        
+        $(document).ready(function(){
+            // You need to bind the modal shown event for each tenant
+            {% for message in messages %}
+            $('#messageModal{{ message.tenant }}').on('shown.bs.modal', function () {
+                scrollToBottom({{ message.tenant }}); // Scroll to bottom when modal is shown
+            });
+        
+            // Bind a custom event for updating messages for each tenant
+            $('#messageModal{{ message.tenant }}').on('messagesUpdated', function () {
+                scrollToBottom({{ message.tenant }});
+            });
+            {% endfor %}
         });
     </script>
-    
 {% endblock content %}

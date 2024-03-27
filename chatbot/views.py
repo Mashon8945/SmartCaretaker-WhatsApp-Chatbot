@@ -17,7 +17,7 @@ from datetime import timedelta
 from django.http import JsonResponse
 from django.contrib import messages
 from twilio.twiml.messaging_response import MessagingResponse
-from django.core.paginator import Paginator
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.utils import timezone
 import uuid
 from django.db.models import Sum
@@ -89,9 +89,10 @@ def notice(request):
     messages = WhatsappMessage.objects.all().order_by('-timestamp')  
     admin_messages = AdminMessage.objects.all().order_by('timestamp')
     customers = Customers.objects.all()
-    table = Paginator(WhatsappMessage.objects.all().order_by('-timestamp'))
-    table_page = page.get(page)
-
+    table = Paginator(WhatsappMessage.objects.all().order_by('-timestamp'), 10)
+    table_page = request.GET.get('page')
+    table_pages = table.get_page(table_page)
+    
     phone_to_name = {customer.phone: (customer.firstname, customer.lastname, customer.id) for customer in customers}
     table_messages = [
         {
@@ -104,7 +105,19 @@ def notice(request):
         }
         for message in messages if message.sender in phone_to_name
     ]
+    page = request.GET.get('page', 1)  # Get the page number
+    paginator = Paginator(table_messages, 15)  # Show 10 messages per page
+    items_per_page = 15  # Assuming 10 items per page, adjust as per your pagination setup
+    index_offset = (int(page) - 1) * items_per_page
 
+    try:
+        table_messages_paged = paginator.page(page)
+    except PageNotAnInteger:
+        table_messages_paged = paginator.page(1)
+    except EmptyPage:
+        table_messages_paged = paginator.page(paginator.num_pages)
+
+    
     # Combine user and admin messages
     combined_messages = list(messages) + list(admin_messages)
 
@@ -136,7 +149,7 @@ def notice(request):
                 'id': message.id
             })
         
-    return render(request, 'notice.html', {'messages_with_names': messages_with_names, 'table_messages':table_messages})
+    return render(request, 'notice.html', {'messages_with_names': messages_with_names, 'table_messages':table_messages_paged, 'index_offset':index_offset})
 
 @login_required(login_url='/login/')
 @csrf_exempt
@@ -283,7 +296,13 @@ def whatsapp_webhook(request):
                     message = client.messages.create(
                         to=sender,
                         from_=receiver,
-                        body=f"Hello {firstname},\n\nWe hope you're doing well!\nTo better assist you, please select from the following options:\n{text_options}"
+                        body=f"🌟 Hello {firstname}! 🌟\n\n"
+
+                            "We hope you're doing well and ready to explore your dream home with *Smart Caretaker*! 🏡💼\n\n"
+
+                            "To better assist you, please select from the following options:\n\n"
+
+                            f"{text_options}"
                     )
                     print(f"Message sent! Message SID: {message.sid}")
                 elif body.isdigit():
@@ -292,7 +311,7 @@ def whatsapp_webhook(request):
                         invoice_id = Invoice.objects.filter(tenant_id=id).first().id
                         payment_link = generate_payment_link(request, invoice_id)
                         if payment_link:
-                            response.message(f"Hello {firstname}, here is your one-time payment link: {payment_link}")
+                            response.message(f"Hello {firstname}, here is your one-time secret payment link: {payment_link}")
                         else:
                             response.message("Invoice not found.")
 
@@ -338,33 +357,46 @@ def whatsapp_webhook(request):
                     else:
                         response.message(f"Hello {firstname}, please select a valid option or send 'menu' to see options again.")
                 else:
-                    response.message(f"Hello {firstname},\n\nPlease select from the following options:\n{text_options}")
+                    response.message(f"🌟 Hello {firstname}! 🌟\n\n"
+
+                            "We hope you're doing well and ready to explore your dream home with *Smart Caretaker*! 🏡💼\n\n"
+
+                            "To better assist you, please select from the following options:\n\n"
+
+                            f"{text_options}")
         else:
             # Get or create a state object for the user
             state, created = CustomerState.objects.get_or_create(phone=sender)
             
             if state.state == '':
                 if body.lower() == 'quit':
-                    response.message("You have ended the conversation. Have a great day! ")
+                    response.message("Thank you for your time with *Smart Caretaker*!🏡💼 \n\nIf you have any further questions or need assistance in the future, please don't hesitate to reach out.\n\n Have a great day! ")
                     state.delete()
                 else:
                     # If the state is empty, this is the first interaction
-                    response.message("We couldn't find your information in our records. " 
-                                    "Are you looking for a house? \n\nPlease reply with 'Yes' to view available houses or 'No' to end this conversation.")
+                    response.message("Welcome to *Smart Caretaker!🏡💼*\n\n"
+
+                                    "We are delighted to assist you in finding your ideal home.\n\n"
+
+                                    "Are you currently looking for a house?\n\n"
+
+                                    "- If yes, please reply with *'Yes*' to view available houses.\n"
+                                    "- If no, please reply with *'No'* to end this conversation.\n\n"
+
+                                    "Feel free to reach out if you have any questions or need further assistance. We're here to help!")
                     state.state = 'awaiting_house_interest'
                     state.save()
 
             elif state.state == 'awaiting_house_interest':
                 if body.lower() == 'quit':
-                    response.message("You have ended the conversation. Have a great day!")
-                    state.delete()
+                    response.message("Thank you for your time with *Smart Caretaker*!🏡💼 \n\nIf you have any further questions or need assistance in the future, please don't hesitate to reach out. \n\nHave a great day!")
                 elif body == 'Yes':
                     # The user is interested in a house, show available houses
                     vacant_houses = Houses.objects.filter(vacancy='VACANT')
                     if vacant_houses.exists():
-                        house_list = "Please select a house by number:\n\n No.\t Name\t Type\t\t Rent\n"
+                        house_list = "Please select a house by number:\n\nNo.\t\tName\t\tType\t\tRent\n"
                         for index, house in enumerate(vacant_houses, start=1):
-                            house_list += f"{index}. \tH({house.id}) \t{house.house_type} \tKsh {house.House_rent}\n"
+                            house_list += f"{index}.\t\tH({house.id})\t\t{house.house_type}\t\tKsh {house.House_rent}\n"
                         response.message(house_list)
                         state.state = 'awaiting_house_selection'
                         state.save()
@@ -373,14 +405,14 @@ def whatsapp_webhook(request):
                         state.state = ''
                         state.save()
                 elif body == 'No':
-                    response.message("Thank you for your response. Have a great day!")
-                    state.delete()  # Clean up the state if the user is not interested
+                    response.message("Thank you for your time with *Smart Caretaker*!🏡💼 \n\nIf you have any further questions or need assistance in the future, please don't hesitate to reach out.\n\nHave a great day!")
+                    state.delete()
                 else:
-                    response.message("I didn't understand that. Are you looking for a house? Please reply with 'Yes' or 'No' or 'Quit'.")
+                    response.message("I didn't understand that. Are you looking for a house? \n\nPlease reply with 'Yes' or 'No' or 'Quit'.")
 
             elif state.state == 'awaiting_house_selection':
                 if body.lower() == 'quit':
-                    response.message("You have ended the conversation. Have a great day!")
+                    response.message("Thank you for your time with *Smart Caretaker*!🏡💼 \n\nIf you have any further questions or need assistance in the future, please don't hesitate to reach out.\n\nHave a great day!")
                     state.delete()
                 else:
                     try:
@@ -390,13 +422,13 @@ def whatsapp_webhook(request):
                         state.selected_house_id = selected_house.id
                         state.state = 'awaiting_user_registration'
                         state.save()
-                        response.message(f"You have selected house H({selected_house.id}). Please provide your Firstname, Lastname and email address: \n\n In the form Firstname, Lastname, Email. or 'Quit' ")
+                        response.message(f"You have selected house H({selected_house.id}). Please provide your Firstname, Lastname and email address: \n\nIn the form Firstname, Lastname, Email. or 'Quit' ")
                     except (ValueError, IndexError):
                         response.message("Invalid selection. Please select a house by number from the list.")
 
             elif state.state == 'awaiting_user_registration':
                 if body.lower() == 'quit':
-                    response.message("You have ended the conversation. Have a great day!")
+                    response.message("Thank you for your time with *Smart Caretaker*!🏡💼 \n\nIf you have any further questions or need assistance in the future, please don't hesitate to reach out. \n\nHave a great day!")
                     state.delete()
                 else:
                     # Here you'd collect the user's information in stages, updating state after each step
@@ -439,9 +471,20 @@ def whatsapp_webhook(request):
                             # Save the Assignment object, which updates the House vacancy status
                             assignment.save()
                             generate_invoices(request)
+
+                            tenant = Customers.objects.filter(phone=sender).first()
+                            if tenant:
+                                id = tenant.id
+                                invoice_id = Invoice.objects.filter(tenant_id=id).first().id
+                                payment_link = generate_payment_link(request, invoice_id)
                             
-                            response.message(f"Thank you {firstname.strip()}, you have been registered and your house has been booked.")
-                            state.delete()  # Clean up the state after registration
+                                response.message(f"Thank you {firstname.strip()}, you have been registered, and your house H({selected_house.id}) has been booked.\n\n"
+
+                                                    "Welcome to *Smart Caretaker!🏡💼* We are excited to have you join us. Your move-in date is [allocate_date]. \n\nWe look forward to making your stay with us comfortable and enjoyable!\n\n"
+
+                                                    f"Please remember to clear your rent before joining. Payment Link: {payment_link} \n\n"
+                                                    "If you have any questions or need assistance, feel free to reach out.")
+                                state.delete()  # Clean up the state after registration
                         else:
                             response.message("The house you selected is no longer available. Please start over.")
                             state.state = 'awaiting_house_interest'
