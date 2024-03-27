@@ -92,7 +92,7 @@ def notice(request):
     table = Paginator(WhatsappMessage.objects.all().order_by('-timestamp'), 10)
     table_page = request.GET.get('page')
     table_pages = table.get_page(table_page)
-    
+
     phone_to_name = {customer.phone: (customer.firstname, customer.lastname, customer.id) for customer in customers}
     table_messages = [
         {
@@ -654,7 +654,13 @@ def add_customer(request):
         if not firstname or not lastname or not email or not phone:
             return HttpResponseBadRequest('Missing Field!')
         try:
-            Customers.objects.create{firstname = firstname,lastname = lastname, email = email, phone = 'whatsapp:' +'+254'+phone, is_active = active )
+            Customers.objects.create(
+                firstname = firstname,
+                lastname = lastname, 
+                email = email, 
+                phone = 'whatsapp:' +'+254'+phone, 
+                is_active = active 
+            )
             return JsonResponse({'status': 'success', 'message': 'Tenant added successfully!'})
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': 'An error occurred while adding new Tenant.'}, status=500)
