@@ -276,7 +276,7 @@ def whatsapp_webhook(request):
         text_options = "Menu\n1. Rent Payment\n2. Inquire Rent Arrears\n3. Request Statement\n4. Other(specify)"
 
         # Check if the sender is an existing tenant
-        tenant = Customers.objects.filter(phone=sender).first()
+        tenant = Customers.objects.filter(phone=sender, is_active = 1).first()
         if tenant:
             firstname = tenant.firstname
             id = tenant.id
@@ -336,12 +336,7 @@ def whatsapp_webhook(request):
 
                             # Send the message with the transactions formatted as text
                             try:
-                                message = client.messages.create(
-                                    to=sender,
-                                    from_=receiver,
-                                    body=message_body
-                                )
-                                print(f"Message sent! Message SID: {message.sid}")
+                                response.message(f"{message_body}")
                             except Exception as e:
                                 print(f"Error sending message: {e}")
                                 response.message("Error sending message. Please try again later.")

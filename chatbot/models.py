@@ -143,6 +143,7 @@ class WhatsappMessage(models.Model):
     receiver = models.CharField(max_length = 255)
     body = models.TextField(blank = True, null = True, max_length = 10000)
     timestamp = models.DateTimeField(auto_now_add = True)
+    replied = models.BooleanField(null=False, default=False)
 
     def __str__(self):
         return f"{self.sender} > {self.receiver}: {self.body}"
