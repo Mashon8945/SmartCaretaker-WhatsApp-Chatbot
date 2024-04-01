@@ -226,7 +226,7 @@
                 <div class="col-lg-7">
                     <div class="card">
                         <div class="card-body">
-                            <h4 class="card-title">Recent messages <i class="mdi mdi-bell"></i>
+                            <h4 class="card-title">Unread messages <i class="mdi mdi-bell"></i>
                                 <sup style="color:red">{{ message_count }}</sup>
                             </h4>
                         </div>
@@ -244,7 +244,7 @@
                                     </thead>
                                     <tbody>
                                         {% for message in table_messages %}
-                                        <tr>
+                                        <tr style="{% if message.read == False %} font-weight: bold; background-color: #e8f4ea; {% endif %}">
                                             <td scope="row">{{ forloop.counter }}</td>
                                             <td scope="row">{{ message.firstname }} {{ message.lastname }}</td>
                                             <td scope="row">
@@ -258,7 +258,7 @@
                                             <td scope="row">{{ message.timestamp }}</td>
                                             <td class="action-row">
                                                 <div class="dropdown">
-                                                    <a  href="#" role="button" id="dropdownMenuLink{{ message.id }}" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                                    <a href="#" role="button" id="dropdownMenuLink{{ message.id }}" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                                                         <span class="text-muted">&#8942;</span> <!-- The three vertical dots -->
                                                     </a>
                                                     <div class="dropdown-menu" aria-labelledby="dropdownMenuLink{{ message.id }}">
@@ -271,7 +271,6 @@
                                         </tr>
                                         {% endfor %}
                                     </tbody>
-                                </table>
                                 </table>
                             </div>
                         </div>

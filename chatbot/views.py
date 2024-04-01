@@ -212,6 +212,7 @@ def dashboard(request):
             'tenant': phone_to_name[message.sender][2],
             'content': message.body,
             'id': message.id,
+            'read': message.replied,
             'timestamp': message.timestamp
         }
         for message in recent_messages if message.sender in phone_to_name
