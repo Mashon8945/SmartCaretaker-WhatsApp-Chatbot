@@ -274,7 +274,7 @@ def whatsapp_webhook(request):
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
         
         # Define the text-based options
-        text_options = "Menu\n1. Rent Payment\n2. Inquire Rent Arrears\n3. Request Statement\n4. Other(specify)"
+        text_options = "Menu\n1. Rent Payment\n2. Inquire Rent Arrears\n3. Request Statement\n4. Request Maintenance\n5. Other(specify)"
 
         # Check if the sender is an existing tenant
         tenant = Customers.objects.filter(phone=sender, is_active = 1).first()
@@ -344,6 +344,12 @@ def whatsapp_webhook(request):
                         else:
                             response.message("No transactions found.")
                     elif option == 4:
+                        tenant.awaiting_response = True
+                        tenant.save()
+
+                        # Prompt the user to specify maintenance
+                        response.message(f"Hello {firstname}, Specify Maintenance/Repairs.")
+                    elif option == 5:
                         # Set a flag in the database to indicate that the next message should be captured
                         tenant.awaiting_response = True
                         tenant.save()
