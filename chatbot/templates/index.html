@@ -1,118 +1,6 @@
-{% extends "header.html" %}
+{% extends "base.html" %}
 {% block content %}
-<style>
-    body{
-        background-color: #fff;
-    }
-
-    ::-webkit-scrollbar {
-        width: 10px;
-    }
-    
-    /* Track */
-    ::-webkit-scrollbar-track {
-        background: #eee; 
-    }
-
-    /* Handle */
-    ::-webkit-scrollbar-thumb {
-        background: #888; 
-    }
-    
-    /* Handle on hover */
-    ::-webkit-scrollbar-thumb:hover {
-        background: #555; 
-    }
-    
-    .wrapper{
-        height: 100vh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        background-color: #651FFF;
-    }
-    
-    .main{
-        background-color: #eee;
-        width: 320px;
-        position: relative;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
-        padding: 6px 0px 0px 0px;
-    }
-    .scroll{
-        overflow-y: scroll;
-        scroll-behavior: smooth;
-        height: 325px;
-    }
-    .img1{
-        border-radius: 50%;
-        background-color: #66BB6A;
-    }
-    .name{
-        font-size: 8px;
-    
-    }
-    .msg{
-        background-color: #fff;
-        font-size: 11px;
-        padding: 5px;
-        border-radius: 5px;
-        font-weight: 500;
-        color: #3e3c3c;
-    }
-    .between{
-        font-size: 8px;
-        font-weight: 500;
-        color: #a09e9e;
-    }
-    .navbar{
-        border-bottom-left-radius: 8px;
-        border-bottom-right-radius: 8px;
-        box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
-    
-    }
-    .form-control{
-        font-size: 12px;
-        font-weight: 400;
-        width: 230px;
-        height: 30px;
-        border: none;
-    
-    }
-    form-control: focus{
-        box-shadow: none;
-        overflow: hidden;
-        border: none;
-    }
-    .form-control:focus{
-        box-shadow: none !important;
-    }
-    .icon1{
-        color: #7C4DFF !important;
-        font-size: 18px !important;	
-        cursor: pointer;
-    }
-    
-    .icon2{
-        color: #512DA8 !important;
-        font-size: 18px !important;
-        position: relative;
-        left: 8px;
-        padding: 0px;
-        cursor: pointer;
-    
-    }
-    
-    .icondiv{
-        border-radius: 50%;
-        width: 15px;
-        height: 15px;
-        padding: 2px;
-        position: relative;
-        bottom: 1px;
-    }
-</style>
+{% load static %}
     <div class="container-fluid px-4">
         <h1 class="mt-4">Dashboard</h1>
         <ol class="breadcrumb mb-4">
@@ -169,35 +57,35 @@
             </div>
         </div>
         {% for message in messages %}
-        <div class="modal fade" id="messageModal{{ message.tenant }}" tabindex="-1" role="dialog" aria-labelledby="messageModalLabel{{ message.tenant }}" aria-hidden="true">
+        <div class="modal fade" id="messageModal{{ message.id }}" tabindex="-1" role="dialog" aria-labelledby="messageModalLabel{{ message.id }}" aria-hidden="true">
             <div class="modal-dialog" role="document">
                 <div class="modal-content">
                     <div class="modal-header">
-                        <h5 class="modal-title" id="messageModalLabel{{ message.tenant }}">{{ message.firstname }} {{ message.lastname }}</h5>
+                        <h5 class="modal-title" id="messageModalLabel{{ message.id }}">{{ message.firstname }} {{ message.lastname }}</h5>
                         <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
                             <span aria-hidden="true">&times;</span>
                         </button>
                     </div>
                     <div class="modal-body chat-modal-body">
                         <div class="">
-                            <div class="px-2 scroll" id="chatMessages{{ message.tenant }}">
+                            <div class="px-2 scroll" id="chatMessages{{ message.id }}">
                                 {% for chat_message in messages %}
                                     {% if chat_message.sender != 'admin' and chat_message.tenant == message.tenant %}
                                         <div class="d-flex align-items-center">
                                             <div class="text-left pr-1"><img src="https://img.icons8.com/color/40/000000/guest-female.png" width="30" class="img1" /></div>
                                             <div class="pr-2 pl-1">
                                                 <span class="name">{{ chat_message.firstname }} {{ chat_message.lastname }}</span>
-                                                <p class="msg">{{ chat_message.content }}</p>
+                                                <p class="msg">{{ chat_message.content }} </br><sub>{{ chat_message.timestamp }}</sub></p>
                                             </div>
                                         </div>
                                     {% elif chat_message.sender == 'admin' and chat_message.tenant_id == message.tenant %}
                                         <div class="d-flex align-items-center text-right justify-content-end ">
                                             <div class="pr-2">
                                                 <span class="name">Admin</span>
-                                                <p class="msg">{{ chat_message.content }}</p>
+                                                <p class="msg">{{ chat_message.content }} </br> <sub>{{ chat_message.timestamp }}</sub></p>
                                             </div>
                                             <div>
-                                                <img src="https://i.imgur.com/HpF4BFG.jpg" width="30" class="img1" />
+                                                <img src="{% static "../static/profile_images/pp.png" %}" width="30" class="img1" />
                                             </div>                    
                                         </div>
                                     {% endif %}
@@ -209,7 +97,6 @@
                     <div class="modal-footer">
                         <nav class="navbar bg-white navbar-expand-sm d-flex justify-content-between">
                             <input type="text" name="reply_text" id="replyText{{ message.id }}" class="form-control" placeholder="Type a message...">
-                            <input type="hidden" name="phone" id="phone{{ message.id }}" value="{{ chat_message.sender }}">
                             <input type="hidden" id="csrfToken" value="{{ csrf_token }}">                   
                             <div class="icondiv d-flex justify-content-end">
                                 <i class="fa fa-arrow-circle-right icon2" onclick="sendReply({{ message.id }})"></i>
@@ -250,7 +137,7 @@
                                             <td scope="row">
                                                 {% if message.content|length > 50 %}
                                                     {{ message.content|slice:":50" }}...
-                                                    <a href="#" data-bs-toggle="modal" data-bs-target="#messageModal{{ message.tenant }}">Read More</a>
+                                                    <a href="#" data-bs-toggle="modal" data-bs-target="#messageModal{{ message.id }}">Read More</a>
                                                 {% else %}
                                                     {{ message.content }}
                                                 {% endif %}
@@ -262,7 +149,7 @@
                                                         <span class="text-muted">&#8942;</span> <!-- The three vertical dots -->
                                                     </a>
                                                     <div class="dropdown-menu" aria-labelledby="dropdownMenuLink{{ message.id }}">
-                                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#messageModal{{ message.tenant }}">Reply</a>
+                                                        <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#messageModal{{ message.id }}">Reply</a>
                                                         <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal{{ message.id }}">Delete</a>
                                                         <a class="dropdown-item" href="#">Other</a>
                                                     </div>
@@ -345,7 +232,7 @@
                                    '<span class="name">Admin</span>' +
                                    '<p class="msg">' + response.reply_text + '</p>' +
                                    '</div>' +
-                                   '<div><img src="https://i.imgur.com/HpF4BFG.jpg" width="30" class="img1" /></div>' +
+                                   '<div><img src="{% static "../static/profile_images/pp.png" %}" width="30" class="img1" /></div>' +
                                    '</div>';
                     document.getElementById('replyContainer' + messageId).innerHTML += newReply;
                     document.getElementById('replyText' + messageId).value = ''; // Clear the input field
@@ -368,13 +255,13 @@
         $(document).ready(function(){
             // You need to bind the modal shown event for each tenant
             {% for message in messages %}
-            $('#messageModal{{ message.tenant }}').on('shown.bs.modal', function () {
-                scrollToBottom({{ message.tenant }}); // Scroll to bottom when modal is shown
+            $('#messageModal{{ message.id }}').on('shown.bs.modal', function () {
+                scrollToBottom({{ message.id }}); // Scroll to bottom when modal is shown
             });
         
             // Bind a custom event for updating messages for each tenant
             $('#messageModal{{ message.tenant }}').on('messagesUpdated', function () {
-                scrollToBottom({{ message.tenant }});
+                scrollToBottom({{ message.id }});
             });
             {% endfor %}
         });

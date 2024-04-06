@@ -1,5 +1,6 @@
-{% extends "header.html" %}
+{% extends "base.html" %}
 {% block content %}
+{% load static %}
 
 <div class="container-fluid px-4">
     <h1 class="mt-4">Invoice</h1>
@@ -7,25 +8,128 @@
         <li class="breadcrumb-item active">Invoice</li>
     </ol>
     <div class="container-fluid">
-        <!-- Row -->
-        <div class="row"> 
-            <div class="col-lg-12 col-md-6">
-                <div class="card">
-                    <div class="card-body">
-                        <h4 class="card-title">Invoice Details</h4>
+        <div class="row justify-content-center">
+            <div class="col-12 col-lg-10 col-xl-10 col-xxl-10">
+                <div class="row gy-3 mb-3">
+                    <div class="col-6">
+                        <h2 class="text-uppercase text-endx m-0" style="color:green">Smart Caretaker</h2>
                     </div>
-                    <div class="card-body">
-                        <h2>Invoice #{{ invoice.id }}</h2>
-                        <h4>Tenant: {{ invoice.tenant.firstname }} {{ invoice.tenant.lastname }}</h4>
-                        <h5>House: H({{ invoice.house_id }})</h5>
-                        <p>Date Issued: {{ invoice.date_issued }}</p>
-                        <p>Date Due: {{ invoice.date_due }}</p>
-                        <p>Rent: {{ invoice.amount_due }}</p>
-                        <p>Arrears: {{ invoice.arrears }}</p>
-                        <p>Fines: {{ invoice.fines }}</p>
-                        <p>Maintenance Fees: {{ invoice.maintenance_fees }}</p>
-                        <p>Total Due: {{ invoice.total_due }}</p>
+                    <div class="col-6">
+                        <a class="d-block text-end" href="#!">
+                            <img src="{% static "../static/images/Smart-icon.jpeg" %} " class="img-fluid" alt="BootstrapBrain Logo" width="135" height="44">
+                        </a>
                     </div>
+                    <div class="col-12">
+                        <h4>From</h4>
+                        <address>
+                            <strong>Smart Caretaker</strong><br>
+                            Name : {{user.first_name}} {{ user.last_name}}<br>
+                            Phone: {{ user.Paybill }}<br>
+                            Email: {{ user.email }}
+                        </address>
+                    </div>
+                </div>
+                <div class="row mb-3">
+                    <div class="col-12 col-sm-6 col-md-8">
+                        <h4>Bill To</h4>
+                        <address>
+                            <strong>{{ invoice.tenant.firstname }} {{ invoice.tenant.lastname }}</strong><br>
+                            {{ invoice.tenant.firstname }} {{ invoice.tenant.lastname }}<br>
+                            Phone: {{ invoice.tenant.phone }}<br>
+                            Email: {{ invoice.tenant.email }}
+                        </address>
+                    </div>
+                    <div class="col-12 col-sm-6 col-md-4">
+                        <h4 class="row">
+                            <span class="col-6">Invoice</span>
+                            <span class="col-6 text-sm-end">INT-{{invoice.id}}</span>
+                        </h4>
+                    <div class="row">
+                        <span class="col-6">Account</span>
+                        <span class="col-6 text-sm-end">{{user.Paybill}}</span>
+                        <span class="col-6">Invoice Date</span>
+                        <span class="col-6 text-sm-end">{{ invoice.date }}</span>
+                        <span class="col-6">Due Date</span>
+                        <span class="col-6 text-sm-end">{{ invoice.date_due }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="row mb-3">
+                <div class="col-12">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th scope="col" class="text-uppercase">Description</th>
+                                    <th scope="col" class="text-uppercase">Unit</th>
+                                    <th scope="col" class="text-uppercase text-end">Month</th>
+                                    <th scope="col" class="text-uppercase text-end">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody class="table-group-divider">
+                                <tr>
+                                    <th scope="row">Rent</th>
+                                    <td>H({{ invoice.tenant.assigned_house_id}})</td>
+                                    <td class="text-end">{{invoice.date}}</td>
+                                    <td class="text-end">{{ invoice.amount_due}}</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Arrears</th>
+                                    <td>H({{ invoice.tenant.assigned_house_id}})</td>
+                                    <td class="text-end"> - </td>
+                                    <td class="text-end">{{arrears}}</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Maintenance fee</th>
+                                    <td>H({{ invoice.tenant.assigned_house_id}})</td>
+                                    <td class="text-end">{{invoice.date}}</td>
+                                    <td class="text-end">{{invoice.maintenance_fees}}</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Water Bill</th>
+                                    <td>H({{ invoice.tenant.assigned_house_id}})</td>
+                                    <td class="text-end">{{invoice.date}}</td>
+                                    <td class="text-end">{{invoice.fines}}</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Other</th>
+                                    <td>H({{ invoice.tenant.assigned_house_id}})</td>
+                                    <td class="text-end">{{invoice.fines}}</td>
+                                    <td class="text-end">{{invoice.fines}}</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"></th>
+                                    <td></td>
+                                    <td class="text-end"></td>
+                                    <td class="text-end"></td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"></th>
+                                    <td></td>
+                                    <td class="text-end"></td>
+                                    <td class="text-end"></td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end">Subtotal</td>
+                                    <td class="text-end">{{ subtotal }}</td>
+                                </tr>
+                                <tr>
+                                    <td colspan="3" class="text-end">VAT (5%)</td>
+                                    <td class="text-end">18.1</td>
+                                </tr>
+                                <tr>
+                                    <th scope="row" colspan="3" class="text-uppercase text-end">Total</th>
+                                    <td class="text-end">$495.1</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-12 text-end">
+                    <button type="submit" class="btn btn-primary mb-3">Download Invoice</button>
+                    <button type="submit" class="btn btn-danger mb-3">Submit Payment</button>
                 </div>
             </div>
         </div>

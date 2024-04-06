@@ -1,3 +1,4 @@
+from datetime import datetime
 from decimal import Decimal
 from django.http import HttpResponseBadRequest, JsonResponse, HttpResponseRedirect
 from django.shortcuts import render, HttpResponse, redirect
@@ -101,7 +102,8 @@ def notice(request):
             'tenant':phone_to_name[message.sender][2],
             'content': message.body,
             'id': message.id,
-            'timestamp': message.timestamp
+            'timestamp': message.timestamp,
+            'read': message.replied
         }
         for message in messages if message.sender in phone_to_name
     ]
@@ -166,8 +168,7 @@ def dashboard(request):
         tenant = Customers.objects.get(phone = to_whatsapp_number).id 
 
         client.messages.create(body = reply_text, from_ = from_whatsapp_number, to = to_whatsapp_number)
-        message_to_reply.replied = True
-        message_to_reply.save()
+        
         try:
             # Save the new admin message
             new_reply = AdminMessage.objects.create(
@@ -181,17 +182,16 @@ def dashboard(request):
                 'reply_text': new_reply.content,
                 'timestamp': new_reply.timestamp.strftime('%Y-%m-%d %H:%M:%S'),
             }
+            message_to_reply.replied = True
+            message_to_reply.save()
             return JsonResponse(response_data)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=400)
-
-        # After saving the reply or sending the message, return a JsonResponse
-        # return JsonResponse({'reply_text': reply_text}, status=200)
         
     current_time = timezone.now()
     two_days_ago = current_time - timedelta(days=2)
     recent_messages = WhatsappMessage.objects.filter(timestamp__gte=two_days_ago).order_by('-timestamp')
-    recent_messages_count = WhatsappMessage.objects.filter(timestamp__gte=two_days_ago).order_by('-timestamp').count()
+    recent_messages_count = WhatsappMessage.objects.filter(timestamp__gte=two_days_ago, replied = False).order_by('-timestamp').count()
     messages = WhatsappMessage.objects.all()
 
     recent_transactions = Transactions.objects.filter(date__gte=two_days_ago).order_by('-date')
@@ -278,8 +278,9 @@ def whatsapp_webhook(request):
 
         # Check if the sender is an existing tenant
         tenant = Customers.objects.filter(phone=sender, is_active = 1).first()
+
         if tenant:
-            firstname = tenant.firstname
+            firstname = tenant.lastname
             id = tenant.id
 
             if tenant.awaiting_response:
@@ -424,7 +425,6 @@ def whatsapp_webhook(request):
                         state.selected_house_id = selected_house.id
                         state.state = 'awaiting_user_registration'
                         state.save()
-                        response.message(f"You have selected house H({selected_house.id}). Please provide your Firstname, Lastname and email address: \n\nIn the form Firstname, Lastname, Email. or 'Quit' ")
                     except (ValueError, IndexError):
                         response.message("Invalid selection. Please select a house by number from the list.")
 
@@ -435,68 +435,81 @@ def whatsapp_webhook(request):
                 else:
                     # Here you'd collect the user's information in stages, updating state after each step
                     # For brevity, let's assume the user is providing all information at once in a comma-separated format: "Firstname, Lastname, Email"
-                    try:
-                        # Splitting the input into first name, last name, and email
-                        firstname, lastname, email = [part.strip() for part in body.split(',')]
-                        
-                        # Validate the presence of first name, last name, and email
-                        if not firstname or not lastname or not email:
-                            raise ValueError("Provide your information in the format: Firstname, Lastname, Email.")
-
-                        # Email specific validation
-                        if '@gmail.com' not in email.lower():
-                            raise ValueError("Please provide a valid email address with '@gmail.com'.")
-                        
-                        # Check if email is already taken
-                        if Customers.objects.filter(email=email).exists():
-                            raise ValueError("The email address you provided is already taken by another user.")
-                        
-                        tenant = Customers.objects.create(
-                            phone=sender,
-                            firstname=firstname.strip(),
-                            lastname=lastname.strip(),
-                            email=email.strip(),
-                            is_active = 1,
-                            assigned_house_id = state.selected_house_id
-                        )
-                        
-                        selected_house = Houses.objects.get(id=state.selected_house_id)
-
-                        # Check if the selected house is still vacant
-                        if selected_house.vacancy.lower() == 'vacant':
-                            # Create the Assignment object
-                            assignment = Assignment(tenant=tenant, house=selected_house)
-
-                            selected_house.vacancy = 'OCCUPIED'  # logic to 'book' a house
-                            selected_house.save()
-                            
-                            # Save the Assignment object, which updates the House vacancy status
-                            assignment.save()
-                            generate_invoices(request)
-
-                            tenant = Customers.objects.filter(phone=sender).first()
-                            if tenant:
-                                id = tenant.id
-                                invoice_id = Invoice.objects.filter(tenant_id=id).first().id
-                                payment_link = generate_payment_link(request, invoice_id)
-                            
-                                response.message(f"Thank you {firstname.strip()}, you have been registered, and your house H({selected_house.id}) has been booked.\n\n"
-
-                                                    "Welcome to *Smart Caretaker!🏡💼* We are excited to have you join us. Your move-in date is [allocate_date]. \n\nWe look forward to making your stay with us comfortable and enjoyable!\n\n"
-
-                                                    f"Please remember to clear your rent before joining. Payment Link: {payment_link} \n\n"
-                                                    "If you have any questions or need assistance, feel free to reach out.")
-                                state.delete()  # Clean up the state after registration
+                    if Customers.objects.filter(phone=sender).exists():
+                        cust = Customers.objects.get(phone=sender)
+                        response.message("Kindly confirm your details as follows:\n\n"
+                                         f"Firstname: { cust.firstname}\nLastname: {cust.lastname}\nEmail: {cust.email.lower()}\nSelected house: {state.selected_house_id}"
+                                         "\n\nSelect 'Yes' to confirm or 'No' to edit details")
+                        if body.lower() == 'yes':
+                            pass
+                        elif body.lower() == 'no':
+                            pass
                         else:
+                            response.message("Invalid response. Select 'Yes' or 'No' ")
+                    else:
+                        response.message(f"You have selected house H({selected_house.id}). Please provide your Firstname, Lastname and email address: \n\nIn the form Firstname, Lastname, Email. or 'Quit' ")
+                        try:
+                            # Splitting the input into first name, last name, and email
+                            firstname, lastname, email = [part.strip() for part in body.split(',')]
+                            
+                            # Validate the presence of first name, last name, and email
+                            if not firstname or not lastname or not email:
+                                raise ValueError("Provide your information in the format: Firstname, Lastname, Email.")
+
+                            # Email specific validation
+                            if '@gmail.com' not in email.lower():
+                                raise ValueError("Please provide a valid email address with '@gmail.com'.")
+                            
+                            # Check if email is already taken
+                            if Customers.objects.filter(email=email).exists():
+                                raise ValueError("The email address you provided is already taken by another user.")
+                            
+                            tenant = Customers.objects.create(
+                                phone=sender,
+                                firstname=firstname.strip(),
+                                lastname=lastname.strip(),
+                                email=email.strip(),
+                                is_active = 1,
+                                assigned_house_id = state.selected_house_id
+                            )
+                            
+                            selected_house = Houses.objects.get(id=state.selected_house_id)
+
+                            # Check if the selected house is still vacant
+                            if selected_house.vacancy.lower() == 'vacant':
+                                # Create the Assignment object
+                                assignment = Assignment(tenant=tenant, house=selected_house)
+
+                                selected_house.vacancy = 'OCCUPIED'  # logic to 'book' a house
+                                selected_house.save()
+                                
+                                # Save the Assignment object, which updates the House vacancy status
+                                assignment.save()
+                                generate_invoices(request)
+
+                                tenant = Customers.objects.filter(phone=sender).first()
+                                if tenant:
+                                    id = tenant.id
+                                    invoice_id = Invoice.objects.filter(tenant_id=id).first().id
+                                    payment_link = generate_payment_link(request, invoice_id)
+                                
+                                    response.message(f"Thank you {firstname.strip()}, you have been registered, and your house H({selected_house.id}) has been booked.\n\n"
+
+                                                        "Welcome to *Smart Caretaker!🏡💼* We are excited to have you join us. Your move-in date is [allocate_date]. \n\nWe look forward to making your stay with us comfortable and enjoyable!\n\n"
+
+                                                        f"Please remember to clear your rent before joining. Payment Link: {payment_link} \n\n"
+                                                        "If you have any questions or need assistance, feel free to reach out.")
+                                    state.delete()  # Clean up the state after registration
+                            else:
+                                response.message("The house you selected is no longer available. Please start over.")
+                                state.state = 'awaiting_house_interest'
+                                state.save()
+                        except ValueError as e:
+                            response.message(str(e) + "\n")
+                        except Houses.DoesNotExist:
                             response.message("The house you selected is no longer available. Please start over.")
                             state.state = 'awaiting_house_interest'
                             state.save()
-                    except ValueError as e:
-                        response.message(str(e) + "\n")
-                    except Houses.DoesNotExist:
-                        response.message("The house you selected is no longer available. Please start over.")
-                        state.state = 'awaiting_house_interest'
-                        state.save()
         return HttpResponse(str(response), content_type='application/xml', status=200)
     else:
         return HttpResponse("Method Not Allowed", status=405)
@@ -785,7 +798,31 @@ def generate_invoices(request):
 @login_required(login_url='/login/')
 def view_invoice(request, invoice_id):
     invoice = Invoice.objects.get(id=invoice_id)
-    return render(request, 'invoice.html', {'invoice': invoice})
+    tenant = invoice.tenant
+    # Get all previous month's invoices for the tenant
+    previous_invoices = Invoice.objects.filter(
+        tenant=tenant,
+        date__lt=datetime.now().replace(day=1)  # Exclude current month's invoices
+    )
+    
+    # Calculate arrears for previous months
+    arrears = previous_invoices.aggregate(
+        total_arrears=Sum('amount_due') + Sum('maintenance_fees') + Sum('fines')
+    )['total_arrears'] or 0
+    
+    # Calculate sum for current month's invoice
+    current_sum = invoice.amount_due + invoice.maintenance_fees + invoice.fines
+    
+    # Total amount (arrears + current month's sum)
+    total_amount = arrears + current_sum
+    print(total_amount)
+    
+    return render(request, 'invoice.html', {
+        'invoice': invoice,
+        'arrears': arrears,
+        'current_sum': current_sum,
+        'subtotal': total_amount
+    })
 
 @login_required(login_url='/login/')
 def invoice_list(request):

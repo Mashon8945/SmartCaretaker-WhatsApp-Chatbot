@@ -1,5 +1,6 @@
-{% extends "header.html" %}
+{% extends "base.html" %}
 {% block content %}
+{% load static %}
 <style>
     body{
         background-color: #fff;
@@ -114,35 +115,35 @@
     }
 </style>
 {% for message in messages_with_names %}
-<div class="modal fade" id="messageModal{{ message.tenant }}" tabindex="-1" role="dialog" aria-labelledby="messageModalLabel{{ message.tenant }}" aria-hidden="true">
+<div class="modal fade" id="messageModal{{ message.id }}" tabindex="-1" role="dialog" aria-labelledby="messageModalLabel{{ message.id }}" aria-hidden="true">
     <div class="modal-dialog" role="document">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title" id="messageModalLabel{{ message.tenant }}">{{ message.firstname }} {{ message.lastname }}</h5>
+                <h5 class="modal-title" id="messageModalLabel{{ message.id }}">{{ message.firstname }} {{ message.lastname }}</h5>
                 <button type="button" class="close" data-bs-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
             <div class="modal-body chat-modal-body">
                 <div class="">
-                    <div class="px-2 scroll" id="chatMessages{{ message.tenant }}">
+                    <div class="px-2 scroll" id="chatMessages{{ message.id }}">
                         {% for chat_message in messages_with_names %}
                             {% if chat_message.sender != 'admin' and chat_message.tenant == message.tenant %}
                                 <div class="d-flex align-items-center">
                                     <div class="text-left pr-1"><img src="https://img.icons8.com/color/40/000000/guest-female.png" width="30" class="img1" /></div>
                                     <div class="pr-2 pl-1">
                                         <span class="name">{{ chat_message.firstname }} {{ chat_message.lastname }}</span>
-                                        <p class="msg">{{ chat_message.content }}</p>
+                                        <p class="msg">{{ chat_message.content }} </br> <sub>{{ chat_message.timestamp }}</sub></p>
                                     </div>
                                 </div>
                             {% elif chat_message.sender == 'admin' and chat_message.tenant_id == message.tenant %}
                                 <div class="d-flex align-items-center text-right justify-content-end ">
                                     <div class="pr-2">
                                         <span class="name">Admin</span>
-                                        <p class="msg">{{ chat_message.content }}</p>
+                                        <p class="msg">{{ chat_message.content }} </br> <sub>{{ chat_message.timestamp }}</sub></p>
                                     </div>
                                     <div>
-                                        <img src="https://i.imgur.com/HpF4BFG.jpg" width="30" class="img1" />
+                                        <img src="{% static "../static/profile_images/pp.png" %}" width="30" class="img1" />
                                     </div>                    
                                 </div>
                             {% endif %}
@@ -154,7 +155,6 @@
             <div class="modal-footer">
                 <nav class="navbar bg-white navbar-expand-sm d-flex justify-content-between">
                     <input type="text" name="reply_text" id="replyText{{ message.id }}" class="form-control" placeholder="Type a message...">
-                    <input type="hidden" name="phone" id="phone{{ message.id }}" value="{{ chat_message.sender }}">
                     <input type="hidden" id="csrfToken" value="{{ csrf_token }}">                   
                     <div class="icondiv d-flex justify-content-end">
                         <i class="fa fa-arrow-circle-right icon2" onclick="sendReply({{ message.id }})"></i>
@@ -193,13 +193,13 @@
                                 </thead>
                                 <tbody>
                                     {% for message in table_messages %}
-                                    <tr>
+                                    <tr style="{% if message.read == False %} font-weight: bold; background-color: #e8f4ea; {% endif %}">
                                         <td scope="row">{{ index_offset|add:forloop.counter }}</td>
                                         <td scope="row">{{ message.firstname }} {{ message.lastname }}</td>
                                         <td scope="row">
                                             {% if message.content|length > 50 %}
                                             {{ message.content|slice:":50" }}...
-                                            <a href="#" data-bs-toggle="modal" data-bs-target="#messageModal{{ message.tenant }}">Read More</a>
+                                            <a href="#" data-bs-toggle="modal" data-bs-target="#messageModal{{ message.id }}">Read More</a>
                                             {% else %}
                                             {{ message.content }}
                                             {% endif %}
@@ -208,10 +208,10 @@
                                         <td class="action-row">
                                             <div class="dropdown">
                                                 <a  href="#" role="button" id="dropdownMenuLink{{ message.id }}" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                                                    <span class="text-muted">&#8942;</span> <!-- The three vertical dots -->
+                                                    <span class="text-muted" style="color: green">&#8942;</span> <!-- The three vertical dots -->
                                                 </a>
                                                 <div class="dropdown-menu" aria-labelledby="dropdownMenuLink{{ message.id }}">
-                                                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#messageModal{{ message.tenant }}">Reply</a>
+                                                    <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#messageModal{{ message.id }}">Reply</a>
                                                     <a class="dropdown-item" href="#" data-bs-toggle="modal" data-bs-target="#deleteModal{{ message.id }}">Delete</a>
                                                     <a class="dropdown-item" href="#">Other</a>
                                                 </div>
@@ -282,7 +282,7 @@
                                '<span class="name">Admin</span>' +
                                '<p class="msg">' + response.reply_text + '</p>' +
                                '</div>' +
-                               '<div><img src="https://i.imgur.com/HpF4BFG.jpg" width="30" class="img1" /></div>' +
+                               '<div><img src="{% static "../static/profile_images/pp.png" %}" width="30" class="img1" /></div>' +
                                '</div>';
                 document.getElementById('replyContainer' + messageId).innerHTML += newReply;
                 document.getElementById('replyText' + messageId).value = ''; // Clear the input field
@@ -305,13 +305,13 @@
     $(document).ready(function(){
         // You need to bind the modal shown event for each tenant
         {% for message in messages_with_names %}
-        $('#messageModal{{ message.tenant }}').on('shown.bs.modal', function () {
-            scrollToBottom({{ message.tenant }}); // Scroll to bottom when modal is shown
+        $('#messageModal{{ message.id }}').on('shown.bs.modal', function () {
+            scrollToBottom({{ message.id }}); // Scroll to bottom when modal is shown
         });
     
         // Bind a custom event for updating messages for each tenant
-        $('#messageModal{{ message.tenant }}').on('messagesUpdated', function () {
-            scrollToBottom({{ message.tenant }});
+        $('#messageModal{{ message.id }}').on('messagesUpdated', function () {
+            scrollToBottom({{ message.id }});
         });
         {% endfor %}
     });
