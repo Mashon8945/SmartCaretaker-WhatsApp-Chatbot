@@ -1,6 +1,23 @@
 {% extends "base.html" %}
 {% block content %}
 {% load static %}
+<style>
+    .form-control{
+        font-size: 12px;
+        font-weight: 400;
+        width: 230px;
+        height: 30px;
+        border: none;
+    }
+    form-control: focus{
+        box-shadow: none;
+        overflow: hidden;
+        border: none;
+    }
+    .form-control:focus{
+        box-shadow: none !important;
+    }
+</style>
     <div class="container-fluid px-4">
         <h1 class="mt-4">Dashboard</h1>
         <ol class="breadcrumb mb-4">

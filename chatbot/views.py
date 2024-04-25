@@ -162,6 +162,7 @@ def dashboard(request):
 
         message_to_reply = WhatsappMessage.objects.get(id = message_id)
         client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
+        response = MessagingResponse()
         from_whatsapp_number = 'whatsapp:+14155238886'
         to_whatsapp_number = message_to_reply.sender
 
@@ -815,13 +816,21 @@ def view_invoice(request, invoice_id):
     
     # Total amount (arrears + current month's sum)
     total_amount = arrears + current_sum
-    print(total_amount)
+    vat_rate = Decimal('0.05')
+    vat = float(vat_rate * total_amount)
+
+    # Convert VAT back to Decimal
+    vat = Decimal(str(vat))
+
+    net = total_amount + vat
     
     return render(request, 'invoice.html', {
         'invoice': invoice,
         'arrears': arrears,
         'current_sum': current_sum,
-        'subtotal': total_amount
+        'subtotal': total_amount, 
+        'vat': vat,
+        'net': net
     })
 
 @login_required(login_url='/login/')
