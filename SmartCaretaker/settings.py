@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-ycg$2poyupr99y11=z9c@7v9ov0f47vd$pg%p5b1hcf47h+hy3
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['huge-bream-vast.ngrok-free.app', 'localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['d72c-197-237-13-232.ngrok-free.app', 'huge-bream-vast.ngrok-free.app', 'localhost', '127.0.0.1']
 CSRF_TRUSTED_ORIGINS = ['https://*.ngrok-free.app']
 
 

@@ -156,7 +156,7 @@ def notice(request):
 @login_required(login_url='/login/')
 @csrf_exempt
 def dashboard(request):
-    if request.is_ajax():
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
         message_id = request.POST.get('message_id')
         reply_text = request.POST.get('reply_text')
 
@@ -295,7 +295,7 @@ def whatsapp_webhook(request):
                 # Send confirmation to the user
                 response.message(f"Thank you {firstname}, we have received your message. Our team will get back to you shortly.")
             else:
-                if body in ['Hello', 'Hi', 'Hey', 'Sasa', 'Mambo']:
+                if body in ['Hello', 'Hi', 'Hey', 'Sasa', 'Mambo', 'Okay']:
                     message = client.messages.create(
                         to=sender,
                         from_=receiver,
@@ -330,7 +330,7 @@ def whatsapp_webhook(request):
                         
                         if transactions.exists():
                             # Initialize a message string with a header
-                            message_body = f"Hello {firstname}, here is your statement:\n\n"
+                            message_body = f"Hello {firstname}, your statement for house H is as follows:\n\n"
                             message_body += "No. \tTx ID \tAmount  \tDate \n\n"  # Column headers
 
                             # Iterate through transactions and append each to the message string
