@@ -12,18 +12,28 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+# Load environment variables from the .env file
+load_dotenv()
+
+# Now you can access your API keys or other env variables
+TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
+TWILIO_AUTH_TOKEN= os.getenv('TWILIO_AUTH_TOKEN')
+SECRET_KEY = os.getenv('SECRET_KEY')
+DEBUG = os.getenv('DEBUG') == 'True'
+
+# You can use the API_KEY in your code
 
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-ycg$2poyupr99y11=z9c@7v9ov0f47vd$pg%p5b1hcf47h+hy3'
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
 
 ALLOWED_HOSTS = ['d72c-197-237-13-232.ngrok-free.app', 'huge-bream-vast.ngrok-free.app', 'localhost', '127.0.0.1']
 CSRF_TRUSTED_ORIGINS = ['https://*.ngrok-free.app']
@@ -38,7 +48,6 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-
     'chatbot',
     'django_twilio',
 ]
@@ -92,10 +101,7 @@ DATABASES = {
     }
 }
 
-TWILIO_ACCOUNT_SID = 'ACc0540e69b5b13226792273f1c3e4342a'
-TWILIO_AUTH_TOKEN = 'cd2e938d3f557656a0122ffa6ff6e8e8'
-# DJANGO_TWILIO_FORGERY_PROTECTION = False
-# DJANGO_TWILIO_BLACKLIST_CHECK = True
+
 
 
 # Password validation
